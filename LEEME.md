@@ -67,9 +67,9 @@ Funciona sin conexión: los cambios se guardan y se sincronizan al volver intern
 - **Dentro de cada tema** tienes tres botones:
   - **Estudio:** apuntas los minutos y una nota de cómo ha ido o por dónde te has quedado. La última nota se ve en la ficha del tema y en *Hoy* ("Te quedaste en…"). Los minutos se suman a tus horas.
   - **Repaso:** valoras cómo te lo sabías (😣 Mal · 😐 Regular · 🙂 Bien · 😎 Fácil) y eliges **tú** cuándo volver a repasarlo.
-  - **Vuelta completa:** es el contador de vueltas. Pones la fecha en que la terminaste, si quieres cómo ha ido, y **la fecha en que quieres volver a darlo**.
+  - **Vuelta completa:** es el contador de vueltas. Pones la fecha en que la terminaste y **la fecha en que quieres volver a darlo**.
 - **La fecha para volver a dar un tema siempre la eliges tú.** Puedes cambiarla o quitarla en la ficha del tema ("Volver a darlo"). Ese día el tema aparece en *Hoy → Repasar*.
-- **Temario:** filtra por *Sin empezar / No lo sé / Flojo / Dominado* según lo que marques tú en "Cómo lo llevo". El % es solo una estimación orientativa a partir de tus valoraciones.
+- **Temario:** filtra por *Sin empezar / No lo sé / Flojo / Bien / Dominado* según lo que marques tú en "Cómo lo llevo". El % es solo una estimación orientativa a partir de tus valoraciones.
 - **Plan → Autoplanificar:** primero mete los temas que te faltan de la vuelta actual, repartidos hasta la fecha objetivo de esa vuelta. Si te toca menos de un tema al día, pone "Seguir tema X". Después mete los repasos en las fechas que elegiste; durante la 1ª vuelta solo lo hace si lo activas en *Ajustes*. Puedes pulsarlo las veces que quieras: rehace solo las tareas automáticas y no toca las tuyas.
 - **Ajustes → Objetivos de vueltas:** la fecha en que quieres terminar la vuelta 1, la 2, etc.
 - **Físicas:** registra tus marcas; ves evolución y nota aproximada. ⚠️ Los puntos son una **estimación** interpolada entre las marcas de 0, 5 y 10 puntos; compruébalo con el anexo del baremo oficial de tu convocatoria. Las anclas están en `logic.js` (`BAREMO`) por si cambian.

@@ -48,7 +48,7 @@ const TIPOS = {
 const temaDe = (id) => TEMAS[id - 1];
 
 function Semaforo({ value, small }) {
-  if (!value) return html`<span class="sem vacio ${small ? 'sm' : ''}">Sin marcar</span>`;
+  if (!value || !L.SEMAFORO[value]) return html`<span class="sem vacio ${small ? 'sm' : ''}"><i></i>Sin empezar</span>`;
   const m = L.SEMAFORO[value];
   return html`<span class="sem ${m.cls} ${small ? 'sm' : ''}"><i></i>${m.label}</span>`;
 }
@@ -78,7 +78,7 @@ function RegistroModal({ temaId, tipo: tipoInicial, taskId, onClose }) {
       const reg = { id: L.uid(), date, tipo };
       if (m > 0) reg.min = m;
       if (note.trim()) reg.note = note.trim();
-      if (rating) reg.rating = rating;
+      if (rating && tipo === 'repaso') reg.rating = rating;
       tm.regs.push(reg);
       if (m > 0) s.horas.push({ id: L.uid(), date, min: m, note: `Tema ${temaId} · ${L.TIPO_REG[tipo]}`, regId: reg.id });
       if (tipo !== 'estudio') tm.proximo = prox || null;
@@ -98,8 +98,8 @@ function RegistroModal({ temaId, tipo: tipoInicial, taskId, onClose }) {
       <div class="seg three">${Object.entries(L.TIPO_REG).map(([k, l]) => html`<button class=${tipo === k ? 'on' : ''} onClick=${() => setTipo(k)}>${l}</button>`)}</div>
       <p class="muted small">${ayuda}</p>
       ${tipo === 'estudio' && info.nota ? html`<div class="hint small">Última nota (${fmtCorto(info.nota.date)}): <i>${info.nota.note}</i></div>` : null}
-      ${tipo !== 'estudio' ? html`<label class="lbl">${tipo === 'repaso' ? '¿Qué tal te lo sabías?' : '¿Cómo ha ido la vuelta? (opcional)'}</label>
-        <div class="ratings">${L.RATINGS.map((r) => html`<button class=${'rating ' + (rating === r.v ? 'on' : '')} onClick=${() => setRating(rating === r.v && tipo === 'vuelta' ? 0 : r.v)}><span class="emo">${r.emoji}</span>${r.label}</button>`)}</div>` : null}
+      ${tipo === 'repaso' ? html`<label class="lbl">¿Qué tal te lo sabías?</label>
+        <div class="ratings">${L.RATINGS.map((r) => html`<button class=${'rating ' + (rating === r.v ? 'on' : '')} onClick=${() => setRating(r.v)}><span class="emo">${r.emoji}</span>${r.label}</button>`)}</div>` : null}
       <div class="row2">
         <div><label class="lbl">Minutos${tipo === 'estudio' ? '' : ' (opcional)'}</label><input type="number" inputmode="numeric" min="0" placeholder="p. ej. 90" value=${min} onInput=${(e) => setMin(e.target.value)} /></div>
         <div><label class="lbl">${tipo === 'vuelta' ? 'Fecha en que la terminaste' : 'Fecha'}</label><input type="date" value=${date} max=${today()} onInput=${(e) => setDate(e.target.value)} /></div>
@@ -252,7 +252,7 @@ function AddTask({ date }) {
 
 // ---------- TEMARIO ----------
 const CLASES = [
-  ['todos', 'Todos'], ['sinempezar', 'Sin empezar'], ['rojo', 'No lo sé'], ['amarillo', 'Flojo'], ['verde', 'Dominado'], ['sinmarcar', 'Empezados sin clasificar'], ['pendientes', 'Repaso pendiente'],
+  ['todos', 'Todos'], ['sinempezar', 'Sin empezar'], ['rojo', 'No lo sé'], ['amarillo', 'Flojo'], ['bien', 'Bien'], ['verde', 'Dominado'],
 ];
 function Temario() {
   const s = useStore();
@@ -265,12 +265,12 @@ function Temario() {
     const est = L.dominio(tm, hoy);
     return { t, i, est, clase: L.clase(tm), manual: tm?.semaforo || null, aviso: L.aviso(tm?.semaforo, est) };
   });
-  const pasa = (r, f) => f === 'todos' || (f === 'pendientes' ? r.i.proximo && r.i.proximo <= hoy : r.clase === f);
+  const pasa = (r, f) => f === 'todos' || r.clase === f;
   const visibles = rows.filter((r) => pasa(r, filtro));
   const objetivo = L.objetivoVuelta(s.settings, v.actual);
   return html`<div class="page">
     <header class="ph"><div><div class="muted cap">Vuelta ${v.actual} · ${v.hechos}/45 temas${objetivo ? ' · objetivo ' + fmtCorto(objetivo) : ''}</div><h1>Temario</h1></div></header>
-    <div class="filters">${CLASES.map(([k, l]) => { const n = rows.filter((r) => pasa(r, k)).length; return (k === 'sinmarcar' || k === 'pendientes') && !n && filtro !== k ? null : html`<button class=${'chip ' + (filtro === k ? 'on' : '')} onClick=${() => setFiltro(k)}>${l} <span class="cnt">${n}</span></button>`; })}</div>
+    <div class="filters">${CLASES.map(([k, l]) => { const n = rows.filter((r) => pasa(r, k)).length; return html`<button class=${'chip ' + (filtro === k ? 'on' : '')} onClick=${() => setFiltro(k)}>${l} <span class="cnt">${n}</span></button>`; })}</div>
     ${Object.entries(BLOQUES).map(([b, nombre]) => {
       const list = visibles.filter((r) => r.t.bloque === b);
       if (!list.length) return null;
@@ -279,7 +279,7 @@ function Temario() {
         <div class="tlist">${list.map((r) => html`<a class="trow" href=${'#/tema/' + r.t.id}>
           <span class="tnum">${r.t.id}</span>
           <span class="tmain"><span class="ttit">${r.t.titulo}${r.aviso ? html` <span class="warn-ico" title=${r.aviso}><${Icon} n="alert" s=${14} /></span>` : null}</span>
-            <span class="tmeta">${r.manual ? html`<${Semaforo} value=${r.manual} small />` : r.i.n ? html`<span class="sem vacio sm">Sin clasificar</span>` : null}
+            <span class="tmeta"><${Semaforo} value=${r.clase} small />
               <span class="muted small">${r.i.vueltas} vuelta${r.i.vueltas === 1 ? '' : 's'}${r.i.min ? ' · ' + fmtMin(r.i.min) : ''}</span>
               ${r.i.proximo ? html`<span class=${'small ' + (r.i.proximo <= hoy ? 'due' : 'muted')}>${r.i.proximo < hoy ? 'Repaso atrasado' : 'Repaso ' + fmtRel(r.i.proximo)}</span>` : null}</span></span>
           <span class="tdom">${r.est === null ? html`<span class="small muted">—</span>` : html`<span class="small">${r.est} %</span><${Barra} pct=${r.est} />`}</span>
@@ -334,9 +334,10 @@ function TemaDetalle({ id }) {
 
     <section class="card">
       <h2>Cómo lo llevo</h2>
-      <div class="semsel">${Object.entries(L.SEMAFORO).map(([k, m]) => html`<button class=${'sembtn ' + k + (manual === k ? ' on' : '')} onClick=${() => setSem(k)} aria-pressed=${manual === k}><i></i>${m.label}</button>`)}</div>
+      <div class="semsel"><button class=${'sembtn vacio' + (!manual ? ' on' : '')} onClick=${() => manual && setSem(manual)} aria-pressed=${!manual}><i></i>Sin empezar</button>
+        ${Object.entries(L.SEMAFORO).map(([k, m]) => html`<button class=${'sembtn ' + k + (manual === k ? ' on' : '')} onClick=${() => setSem(k)} aria-pressed=${manual === k}><i></i>${m.label}</button>`)}</div>
       ${aviso ? html`<div class="note warn"><${Icon} n="alert" s=${16} /> ${aviso}</div>` : null}
-      <p class="muted small">${est === null ? 'Cuando valores un repaso o una vuelta, aquí verás también una estimación orientativa.' : `Estimación orientativa según tus valoraciones: ${est} %.`}</p>
+      <p class="muted small">${est === null ? 'Cuando valores un repaso, aquí verás también una estimación orientativa.' : `Estimación orientativa según tus valoraciones: ${est} %.`}</p>
     </section>
 
     <section class="card">
@@ -560,7 +561,7 @@ function Progreso() {
   const diasObj = objetivo ? L.diffDays(hoy, objetivo) + 1 : null;
   const necesario = diasObj > 0 ? restantes / diasObj : null;
   const fin = avance14 > 0 ? addDays(hoy, Math.ceil(restantes / avance14)) : null;
-  const clases = { sinempezar: 0, rojo: 0, amarillo: 0, verde: 0, sinmarcar: 0 };
+  const clases = { sinempezar: 0, rojo: 0, amarillo: 0, bien: 0, verde: 0 };
   TEMAS.forEach((t) => { clases[L.clase(s.temas[t.id])]++; });
   const atrasados = L.pendientes(s.temas, addDays(hoy, -1)).slice(0, 6);
   return html`<div class="page">
@@ -582,11 +583,7 @@ function Progreso() {
       </section>
       <section class="card"><h2>Cómo lo llevas (según tú)</h2>
         <div class="dist">
-          <div><${Semaforo} value="verde" small /><b>${clases.verde}</b></div>
-          <div><${Semaforo} value="amarillo" small /><b>${clases.amarillo}</b></div>
-          <div><${Semaforo} value="rojo" small /><b>${clases.rojo}</b></div>
-          <div><span class="sem vacio sm">Sin empezar</span><b>${clases.sinempezar}</b></div>
-          ${clases.sinmarcar ? html`<div><span class="sem vacio sm">Sin clasificar</span><b>${clases.sinmarcar}</b></div>` : null}
+          ${['verde', 'bien', 'amarillo', 'rojo', 'sinempezar'].map((k) => html`<a href="#/temario"><${Semaforo} value=${k} small /><b>${clases[k]}</b></a>`)}
         </div>
       </section>
     </div>

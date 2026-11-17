@@ -105,20 +105,22 @@ export function dominio(tema, ref = today()) {
   return Math.round(Math.min(100, base * (0.55 + 0.45 * Math.pow(0.5, days / halfLife))));
 }
 
+// Clasificación manual de cada tema (sin valor = "Sin empezar").
 export const SEMAFORO = {
   rojo: { label: 'No lo sé', cls: 'rojo' },
   amarillo: { label: 'Flojo', cls: 'amarillo' },
+  bien: { label: 'Bien', cls: 'bien' },
   verde: { label: 'Dominado', cls: 'verde' },
 };
 export const semaforoDe = (pct) => (pct < 40 ? 'rojo' : pct < 70 ? 'amarillo' : 'verde');
 export function aviso(manual, est) {
   if (!manual || est === null) return null;
-  if (manual === 'verde' && est < 50) return `Lo marcas dominado, pero por tus valoraciones sale un ${est} %`;
+  if ((manual === 'verde' || manual === 'bien') && est < 50) return `Lo marcas como "${SEMAFORO[manual].label}", pero por tus valoraciones sale un ${est} %`;
   if (manual === 'rojo' && est >= 75) return `Lo marcas como "no lo sé", pero por tus valoraciones sale un ${est} %. ¿Lo subes?`;
   return null;
 }
 // Clasificación del temario según lo que marca el usuario.
-export const clase = (tema) => (tema?.semaforo ? tema.semaforo : infoTema(tema).n ? 'sinmarcar' : 'sinempezar');
+export const clase = (tema) => (tema?.semaforo && SEMAFORO[tema.semaforo] ? tema.semaforo : 'sinempezar');
 
 // ---------- Vueltas ----------
 export function resumenVueltas(temas) {
