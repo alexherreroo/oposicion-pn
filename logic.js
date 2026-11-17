@@ -63,115 +63,138 @@ export const fmtMin = (m) => {
   return h ? (r ? `${h} h ${r} min` : `${h} h`) : `${r} min`;
 };
 
-// ---------- Repetición espaciada (derivada siempre del historial) ----------
+// ---------- Registros de cada tema ----------
+// Tipos: 'estudio' (sesión: minutos + nota), 'repaso' (valoración), 'vuelta' (contador de vueltas).
+// La fecha para volver a dar el tema la elige el usuario y se guarda en tema.proximo.
 export const RATINGS = [
   { v: 1, label: 'Mal', emoji: '😣' },
   { v: 2, label: 'Regular', emoji: '😐' },
   { v: 3, label: 'Bien', emoji: '🙂' },
   { v: 4, label: 'Fácil', emoji: '😎' },
 ];
+export const TIPO_REG = { estudio: 'Estudio', repaso: 'Repaso', vuelta: 'Vuelta completa' };
 
-export function schedule(regs = []) {
-  const list = [...regs].sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
-  let ease = 2.5, interval = 0, last = null;
-  for (const r of list) {
-    if (r.rating === 1) {
-      interval = 1; ease = Math.max(1.3, ease - 0.2);
-    } else if (interval === 0) {
-      interval = r.rating === 2 ? 2 : r.rating === 3 ? 4 : 7;
-    } else {
-      const f = r.rating === 2 ? 1.2 : r.rating === 3 ? ease : ease * 1.3;
-      interval = Math.max(interval + 1, Math.round(interval * f));
-      ease = Math.min(3, Math.max(1.3, ease + (r.rating === 2 ? -0.15 : r.rating === 4 ? 0.15 : 0)));
-    }
-    interval = Math.min(interval, 60);
-    last = r;
-  }
+const byDate = (a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0);
+export function infoTema(tema) {
+  const regs = [...(tema?.regs || [])].sort(byDate);
+  const vueltas = regs.filter((r) => r.tipo === 'vuelta');
   return {
-    n: list.length,
-    vueltas: list.filter((r) => r.tipo === 'vuelta').length,
-    last,
-    interval,
-    next: last ? addDays(last.date, interval) : null,
-    list,
+    regs,
+    n: regs.length,
+    vueltas: vueltas.length,
+    ultimaVuelta: vueltas[vueltas.length - 1] || null,
+    last: regs[regs.length - 1] || null,
+    nota: [...regs].reverse().find((r) => r.note) || null,
+    min: regs.reduce((a, r) => a + (r.min || 0), 0),
+    proximo: tema?.proximo || null,
   };
 }
 
 const RATING_PCT = { 1: 25, 2: 55, 3: 80, 4: 95 };
-export function dominio(regs = [], ref = today()) {
-  const s = schedule(regs);
-  if (!s.n) return 0;
-  const recent = s.list.slice(-3);
+// Estimación orientativa: últimas valoraciones + nº de vueltas, y baja poco a poco si no tocas el tema.
+export function dominio(tema, ref = today()) {
+  const i = infoTema(tema);
+  const rated = i.regs.filter((r) => r.rating);
+  if (!rated.length) return null;
+  const recent = rated.slice(-3);
   let w = 0, sum = 0;
-  recent.forEach((r, i) => { sum += RATING_PCT[r.rating] * (i + 1); w += i + 1; });
-  const base = sum / w + Math.min(s.n - 1, 4) * 3;
-  const days = Math.max(0, diffDays(s.last.date, ref));
-  const halfLife = Math.max(3, s.interval * 2);
-  const retention = Math.pow(0.5, days / halfLife);
-  return Math.round(Math.min(100, base * (0.55 + 0.45 * retention)));
+  recent.forEach((r, k) => { sum += RATING_PCT[r.rating] * (k + 1); w += k + 1; });
+  const base = sum / w + Math.min(i.vueltas, 4) * 3;
+  const days = Math.max(0, diffDays(i.last.date, ref));
+  const halfLife = 10 + 10 * i.vueltas;
+  return Math.round(Math.min(100, base * (0.55 + 0.45 * Math.pow(0.5, days / halfLife))));
 }
 
 export const SEMAFORO = {
-  rojo: { label: 'No lo sé', icon: '●', cls: 'rojo' },
-  amarillo: { label: 'Flojo', icon: '●', cls: 'amarillo' },
-  verde: { label: 'Dominado', icon: '●', cls: 'verde' },
+  rojo: { label: 'No lo sé', cls: 'rojo' },
+  amarillo: { label: 'Flojo', cls: 'amarillo' },
+  verde: { label: 'Dominado', cls: 'verde' },
 };
 export const semaforoDe = (pct) => (pct < 40 ? 'rojo' : pct < 70 ? 'amarillo' : 'verde');
-export function aviso(manual, est, studied) {
-  if (!manual || !studied) return null;
-  if (manual === 'verde' && est < 50) return `Lo marcas dominado, pero la estimación es ${est} %`;
-  if (manual === 'rojo' && est >= 75) return `Lo marcas como "no lo sé", pero la estimación es ${est} %. ¿Lo subes?`;
+export function aviso(manual, est) {
+  if (!manual || est === null) return null;
+  if (manual === 'verde' && est < 50) return `Lo marcas dominado, pero por tus valoraciones sale un ${est} %`;
+  if (manual === 'rojo' && est >= 75) return `Lo marcas como "no lo sé", pero por tus valoraciones sale un ${est} %. ¿Lo subes?`;
   return null;
 }
+// Clasificación del temario según lo que marca el usuario.
+export const clase = (tema) => (tema?.semaforo ? tema.semaforo : infoTema(tema).n ? 'sinmarcar' : 'sinempezar');
 
 // ---------- Vueltas ----------
 export function resumenVueltas(temas) {
-  const counts = TEMAS.map((t) => schedule(temas[t.id]?.regs).vueltas);
+  const counts = TEMAS.map((t) => infoTema(temas[t.id]).vueltas);
   const actual = Math.min(...counts) + 1;
   const hechos = counts.filter((c) => c >= actual).length;
   const siguiente = TEMAS.find((t, i) => counts[i] < actual) || null;
   return { counts, actual, hechos, siguiente };
 }
+export const objetivoVuelta = (settings, n) => (settings.objetivosVuelta || [])[n - 1] || '';
 
 export function pendientes(temas, ref = today()) {
-  return TEMAS.map((t) => ({ t, s: schedule(temas[t.id]?.regs) }))
-    .filter(({ s }) => s.n && s.next <= ref)
-    .sort((a, b) => (a.s.next < b.s.next ? -1 : 1));
+  return TEMAS.map((t) => ({ t, i: infoTema(temas[t.id]) }))
+    .filter(({ i }) => i.proximo && i.proximo <= ref)
+    .sort((a, b) => (a.i.proximo < b.i.proximo ? -1 : 1));
 }
 
 // ---------- Autoplanificación ----------
+// 1º) temas que faltan de la vuelta actual, repartidos hasta la fecha objetivo de esa vuelta;
+// 2º) repasos en las fechas que has elegido tú (en la 1ª vuelta solo si lo activas en Ajustes).
+// Sustituye las tareas automáticas pendientes del rango; las tareas que añades tú no se tocan.
 export function autoplan(state, from, to) {
-  const { temas, tasks, settings } = state;
-  const nuevosDia = settings.nuevosPorDia ?? 1;
+  const { temas, settings } = state;
+  const dias = settings.diasEstudio?.length ? settings.diasEstudio : [0, 1, 2, 3, 4, 5];
   const maxRep = settings.maxRepasosDia ?? 3;
-  const dias = settings.diasEstudio ?? [0, 1, 2, 3, 4, 5];
-  const counts = {}, next = {};
-  TEMAS.forEach((t) => { const s = schedule(temas[t.id]?.regs); counts[t.id] = s.vueltas; next[t.id] = s.next; });
-  // Las tareas ya planificadas y sin hacer cuentan como si fueran a hacerse.
-  tasks.filter((k) => !k.done && k.temaId && k.date >= from).forEach((k) => {
-    if (k.kind === 'nuevo') counts[k.temaId]++;
-    next[k.temaId] = addDays(k.date, 7);
-  });
-  const nuevas = [];
-  const existe = (d, id) => tasks.some((k) => k.date === d && k.temaId === id) || nuevas.some((k) => k.date === d && k.temaId === id);
-  for (let d = from; d <= to; d = addDays(d, 1)) {
-    if (!dias.includes(weekday(d))) continue;
-    const debidos = TEMAS.filter((t) => next[t.id] && next[t.id] <= d && !existe(d, t.id))
-      .sort((a, b) => (next[a.id] < next[b.id] ? -1 : 1)).slice(0, maxRep);
-    for (const t of debidos) {
-      nuevas.push({ date: d, temaId: t.id, kind: 'repaso', type: 'repaso', title: `Repasar tema ${t.id}` });
-      next[t.id] = addDays(d, 7);
-    }
-    for (let i = 0; i < nuevosDia; i++) {
-      const actual = Math.min(...Object.values(counts)) + 1;
-      const t = TEMAS.find((x) => counts[x.id] < actual);
-      if (!t || existe(d, t.id)) break;
-      nuevas.push({ date: d, temaId: t.id, kind: 'nuevo', type: 'estudio', title: `Tema ${t.id} (vuelta ${actual})` });
-      counts[t.id]++;
-      next[t.id] = addDays(d, 4);
-    }
+  const v = resumenVueltas(temas);
+  const restantes = TEMAS.filter((t, i) => v.counts[i] < v.actual);
+  const objetivo = objetivoVuelta(settings, v.actual);
+  const avisos = [];
+  const esDia = (d) => dias.includes(weekday(d));
+
+  // Días de estudio desde 'from' hasta la fecha objetivo (o hasta 'to' si no hay objetivo).
+  let porDia;
+  if (objetivo && objetivo >= from) {
+    let n = 0;
+    for (let d = from; d <= objetivo; d = addDays(d, 1)) if (esDia(d)) n++;
+    porDia = restantes.length / Math.max(1, n);
+  } else {
+    if (objetivo) avisos.push(`La fecha objetivo de la vuelta ${v.actual} ya ha pasado: pon una nueva en Ajustes.`);
+    else avisos.push(`Sin fecha objetivo para la vuelta ${v.actual}: uso ${settings.nuevosPorDia ?? 1} tema(s) al día. Puedes ponerla en Ajustes.`);
+    porDia = settings.nuevosPorDia ?? 1;
   }
-  return nuevas;
+
+  const nuevas = [];
+  const proximo = {};
+  TEMAS.forEach((t) => { proximo[t.id] = temas[t.id]?.proximo || null; });
+  const repasosOn = v.actual > 1 || settings.repasosEnPrimeraVuelta;
+  let j = 0; // índice de día de estudio
+  for (let d = from; d <= to; d = addDays(d, 1)) {
+    if (!esDia(d)) continue;
+    const hoyIds = new Set();
+    if (porDia > 0 && restantes.length) {
+      const a = Math.floor(j * porDia), b = Math.max(a + 1, Math.floor((j + 1) * porDia));
+      for (let k = a; k < Math.min(b, restantes.length); k++) {
+        const t = restantes[k];
+        const sigue = porDia < 1 && Math.floor((j - 1) * porDia) === a && j > 0;
+        nuevas.push({ date: d, temaId: t.id, kind: 'nuevo', type: 'estudio', auto: true, title: `${sigue ? 'Seguir' : 'Estudiar'} tema ${t.id} (vuelta ${v.actual})` });
+        hoyIds.add(t.id);
+      }
+    }
+    if (repasosOn) {
+      const debidos = TEMAS.filter((t) => proximo[t.id] && (d === from ? proximo[t.id] <= d : proximo[t.id] === d) && !hoyIds.has(t.id))
+        .sort((x, y) => (proximo[x.id] < proximo[y.id] ? -1 : 1)).slice(0, maxRep);
+      for (const t of debidos) {
+        nuevas.push({ date: d, temaId: t.id, kind: 'repaso', type: 'repaso', auto: true, title: `Repasar tema ${t.id}` });
+        proximo[t.id] = null;
+      }
+    }
+    j++;
+  }
+  if (objetivo && restantes.length && porDia > 0) {
+    const fin = Math.ceil(restantes.length / porDia);
+    if (porDia > 3) avisos.push(`Para llegar al ${fmtCorto(objetivo)} necesitas ${porDia.toFixed(1).replace('.', ',')} temas por día de estudio. ¿Seguro que es realista?`);
+    else avisos.push(`Vuelta ${v.actual}: ${restantes.length} temas pendientes en ${fin} días de estudio hasta el ${fmtCorto(objetivo)}.`);
+  }
+  return { nuevas, avisos };
 }
 
 // ---------- Pruebas físicas ----------

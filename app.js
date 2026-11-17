@@ -2,7 +2,7 @@ import { html, render, useState, useEffect, useMemo } from './preact-htm.js';
 import * as L from './logic.js';
 import { getState, subscribe, update, replaceAll, cloud, initCloud, login, logout, defaultState } from './store.js';
 
-const { TEMAS, BLOQUES, today, addDays, fmtRel, fmtCorto, fmtLargo, fmtMin, schedule, dominio } = L;
+const { TEMAS, BLOQUES, today, addDays, fmtRel, fmtCorto, fmtLargo, fmtMin, } = L;
 
 // ---------- Utilidades de UI ----------
 function useStore() {
@@ -46,7 +46,6 @@ const TIPOS = {
 };
 
 const temaDe = (id) => TEMAS[id - 1];
-const regsDe = (s, id) => s.temas[id]?.regs || [];
 
 function Semaforo({ value, small }) {
   if (!value) return html`<span class="sem vacio ${small ? 'sm' : ''}">Sin marcar</span>`;
@@ -60,41 +59,59 @@ function Barra({ pct }) {
 
 // ---------- Modal para registrar una vuelta o un repaso ----------
 let openRegistroGlobal = () => {};
+const PROX_CHIPS = [[3, '3 días'], [7, '1 semana'], [14, '2 semanas'], [30, '1 mes']];
 function RegistroModal({ temaId, tipo: tipoInicial, taskId, onClose }) {
-  const [tipo, setTipo] = useState(tipoInicial || 'vuelta');
+  const [tipo, setTipo] = useState(tipoInicial || 'estudio');
   const [rating, setRating] = useState(0);
   const [min, setMin] = useState('');
   const [date, setDate] = useState(today());
+  const [note, setNote] = useState('');
+  const [prox, setProx] = useState('');
   const t = temaDe(temaId);
+  const info = L.infoTema(getState().temas[temaId]);
+  const m = parseInt(min, 10) || 0;
+  const valido = tipo === 'estudio' ? m > 0 || note.trim() : tipo === 'repaso' ? rating > 0 : true;
   const guardar = () => {
-    if (!rating) return;
+    if (!valido) return;
     update((s) => {
-      s.temas[temaId] = s.temas[temaId] || { semaforo: null, regs: [] };
-      s.temas[temaId].regs.push({ id: L.uid(), date, tipo, rating });
-      const m = parseInt(min, 10);
-      if (m > 0) s.horas.push({ id: L.uid(), date, min: m, note: `Tema ${temaId}` });
+      const tm = (s.temas[temaId] = s.temas[temaId] || { semaforo: null, regs: [], proximo: null });
+      const reg = { id: L.uid(), date, tipo };
+      if (m > 0) reg.min = m;
+      if (note.trim()) reg.note = note.trim();
+      if (rating) reg.rating = rating;
+      tm.regs.push(reg);
+      if (m > 0) s.horas.push({ id: L.uid(), date, min: m, note: `Tema ${temaId} · ${L.TIPO_REG[tipo]}`, regId: reg.id });
+      if (tipo !== 'estudio') tm.proximo = prox || null;
       if (taskId) { const k = s.tasks.find((x) => x.id === taskId); if (k) k.done = true; }
     });
     onClose();
   };
-  const sched = schedule([...(getState().temas[temaId]?.regs || []), ...(rating ? [{ date, rating, tipo }] : [])]);
+  const ayuda = {
+    estudio: 'Apunta una sesión de estudio: cuánto tiempo y cómo ha ido o por dónde te has quedado.',
+    repaso: 'Repaso del tema: valora cómo te lo sabías y elige cuándo volver a repasarlo.',
+    vuelta: `Has terminado el tema entero: suma 1 al contador (será la vuelta nº ${info.vueltas + 1}).`,
+  }[tipo];
   return html`<div class="modal-bg" onClick=${(e) => e.target === e.currentTarget && onClose()}>
-    <div class="modal" role="dialog" aria-label="Registrar estudio">
+    <div class="modal" role="dialog" aria-label="Registrar">
       <div class="modal-h"><div><div class="muted small">Tema ${t.id} · ${BLOQUES[t.bloque]}</div><h3>${t.titulo}</h3></div>
         <button class="icon-btn" onClick=${onClose} aria-label="Cerrar"><${Icon} n="x" /></button></div>
-      <div class="seg">
-        <button class=${tipo === 'vuelta' ? 'on' : ''} onClick=${() => setTipo('vuelta')}>Vuelta completa</button>
-        <button class=${tipo === 'repaso' ? 'on' : ''} onClick=${() => setTipo('repaso')}>Repaso</button>
-      </div>
-      <p class="muted small">${tipo === 'vuelta' ? 'Cuenta como una vuelta más a este tema.' : 'Repaso rápido: no suma vuelta, pero sí cuenta para el dominio y la próxima fecha.'}</p>
-      <label class="lbl">¿Qué tal te lo sabías?</label>
-      <div class="ratings">${L.RATINGS.map((r) => html`<button class=${'rating ' + (rating === r.v ? 'on' : '')} onClick=${() => setRating(r.v)}><span class="emo">${r.emoji}</span>${r.label}</button>`)}</div>
+      <div class="seg three">${Object.entries(L.TIPO_REG).map(([k, l]) => html`<button class=${tipo === k ? 'on' : ''} onClick=${() => setTipo(k)}>${l}</button>`)}</div>
+      <p class="muted small">${ayuda}</p>
+      ${tipo === 'estudio' && info.nota ? html`<div class="hint small">Última nota (${fmtCorto(info.nota.date)}): <i>${info.nota.note}</i></div>` : null}
+      ${tipo !== 'estudio' ? html`<label class="lbl">${tipo === 'repaso' ? '¿Qué tal te lo sabías?' : '¿Cómo ha ido la vuelta? (opcional)'}</label>
+        <div class="ratings">${L.RATINGS.map((r) => html`<button class=${'rating ' + (rating === r.v ? 'on' : '')} onClick=${() => setRating(rating === r.v && tipo === 'vuelta' ? 0 : r.v)}><span class="emo">${r.emoji}</span>${r.label}</button>`)}</div>` : null}
       <div class="row2">
-        <div><label class="lbl">Minutos (opcional)</label><input type="number" inputmode="numeric" min="0" placeholder="p. ej. 90" value=${min} onInput=${(e) => setMin(e.target.value)} /></div>
-        <div><label class="lbl">Fecha</label><input type="date" value=${date} max=${today()} onInput=${(e) => setDate(e.target.value)} /></div>
+        <div><label class="lbl">Minutos${tipo === 'estudio' ? '' : ' (opcional)'}</label><input type="number" inputmode="numeric" min="0" placeholder="p. ej. 90" value=${min} onInput=${(e) => setMin(e.target.value)} /></div>
+        <div><label class="lbl">${tipo === 'vuelta' ? 'Fecha en que la terminaste' : 'Fecha'}</label><input type="date" value=${date} max=${today()} onInput=${(e) => setDate(e.target.value)} /></div>
       </div>
-      ${rating ? html`<p class="hint">Próximo repaso: <b>${fmtRel(sched.next)}</b> (${fmtCorto(sched.next)})</p>` : null}
-      <div class="modal-f"><button class="btn ghost" onClick=${onClose}>Cancelar</button><button class="btn primary" disabled=${!rating} onClick=${guardar}>Guardar</button></div>
+      <label class="lbl">${tipo === 'estudio' ? '¿Cómo ha ido? ¿Por dónde te has quedado?' : 'Nota (opcional)'}</label>
+      <textarea rows="3" placeholder=${tipo === 'estudio' ? 'p. ej. Me he quedado en el art. 25, me cuestan los plazos' : 'p. ej. Repasar mejor las competencias'} value=${note} onInput=${(e) => setNote(e.target.value)}></textarea>
+      ${tipo !== 'estudio' ? html`<label class="lbl">¿Cuándo quieres volver a darlo?</label>
+        <div class="quick">${PROX_CHIPS.map(([n, l]) => { const d = addDays(date, n); return html`<button type="button" class=${'chip ' + (prox === d ? 'on' : '')} onClick=${() => setProx(d)}>${l}</button>`; })}</div>
+        <div class="row2"><input type="date" value=${prox} min=${date} onInput=${(e) => setProx(e.target.value)} aria-label="Fecha para volver a darlo" />
+          ${prox ? html`<button class="btn ghost sm" onClick=${() => setProx('')}>Sin fecha</button>` : html`<span class="muted small self-c">Sin fecha: no saldrá en repasos</span>`}</div>
+        ${info.proximo ? html`<p class="muted small">Ahora mismo tenía fecha para el ${fmtCorto(info.proximo)}; se sustituirá por esta.</p>` : null}` : null}
+      <div class="modal-f"><button class="btn ghost" onClick=${onClose}>Cancelar</button><button class="btn primary" disabled=${!valido} onClick=${guardar}>Guardar</button></div>
     </div></div>`;
 }
 
@@ -106,6 +123,7 @@ function racha(s) {
   return n;
 }
 const minutosEntre = (s, a, b) => s.horas.filter((h) => h.date >= a && h.date <= b).reduce((x, h) => x + h.min, 0);
+const notaDesdeVuelta = (i) => (i.nota && (!i.ultimaVuelta || i.nota.date >= i.ultimaVuelta.date) ? i.nota : null);
 
 function Hoy() {
   const s = useStore();
@@ -115,42 +133,45 @@ function Hoy() {
   const tareas = s.tasks.filter((k) => k.date === hoy);
   const atrasadas = s.tasks.filter((k) => k.date < hoy && !k.done);
   const diasExamen = s.settings.examDate ? L.diffDays(hoy, s.settings.examDate) : null;
+  const objetivo = L.objetivoVuelta(s.settings, v.actual);
   const minHoy = minutosEntre(s, hoy, hoy);
   const minSemana = minutosEntre(s, L.weekStart(hoy), hoy);
-  const objetivo = (s.settings.horasObjetivoSemana || 0) * 60;
+  const objH = (s.settings.horasObjetivoSemana || 0) * 60;
   const [otro, setOtro] = useState('');
-  const estudiados = TEMAS.filter((t) => regsDe(s, t.id).length);
+  const sig = v.siguiente ? L.infoTema(s.temas[v.siguiente.id]) : null;
+  const nota = sig ? notaDesdeVuelta(sig) : null;
 
   return html`<div class="page">
     <header class="ph"><div><div class="muted cap">${fmtLargo(hoy)}</div><h1>Hoy</h1></div></header>
     <div class="kpis">
       <div class="kpi"><div class="k-l">Examen</div><div class="k-v">${diasExamen === null ? '—' : diasExamen}</div><div class="k-s">${diasExamen === null ? html`<a href="#/ajustes">Pon la fecha</a>` : 'días restantes'}</div></div>
-      <div class="kpi"><div class="k-l">Vuelta ${v.actual}</div><div class="k-v">${v.hechos}<small>/45</small></div><div class="k-s">${Math.round((v.hechos / 45) * 100)} % completada</div></div>
+      <div class="kpi"><div class="k-l">Vuelta ${v.actual}</div><div class="k-v">${v.hechos}<small>/45</small></div><div class="k-s">${objetivo ? `objetivo: ${fmtCorto(objetivo)}` : html`<a href="#/ajustes">Pon un objetivo</a>`}</div></div>
       <div class="kpi"><div class="k-l">Racha</div><div class="k-v">${racha(s)}</div><div class="k-s">días seguidos</div></div>
-      <div class="kpi"><div class="k-l">Esta semana</div><div class="k-v">${(minSemana / 60).toFixed(1).replace('.', ',')}<small> h</small></div><div class="k-s">${objetivo ? `de ${s.settings.horasObjetivoSemana} h objetivo` : 'estudiadas'}</div></div>
+      <div class="kpi"><div class="k-l">Esta semana</div><div class="k-v">${(minSemana / 60).toFixed(1).replace('.', ',')}<small> h</small></div><div class="k-s">${objH ? `de ${s.settings.horasObjetivoSemana} h objetivo` : 'estudiadas'}</div></div>
     </div>
 
     <section class="card">
       <h2>¿Qué toca hoy?</h2>
-      <p class="muted small">Elige: avanzar con temario nuevo o repasar un tema anterior.</p>
       <div class="choice">
         <div class="opt">
           <div class="opt-h"><span class="tag nuevo">Avanzar</span><span class="muted small">Vuelta ${v.actual}</span></div>
-          ${v.siguiente ? html`<div class="opt-t"><b>Tema ${v.siguiente.id}</b> · ${v.siguiente.titulo}</div>
-            <button class="btn primary" onClick=${() => openRegistroGlobal({ temaId: v.siguiente.id, tipo: 'vuelta' })}><${Icon} n="check" s=${18} /> Lo he estudiado</button>` : html`<div class="opt-t">¡Vuelta terminada!</div>`}
+          ${v.siguiente ? html`<div class="opt-t"><button class="link" onClick=${() => go('#/tema/' + v.siguiente.id)}><b>Tema ${v.siguiente.id}</b> · ${v.siguiente.titulo}</button></div>
+            ${nota ? html`<div class="quedaste"><span class="muted small">Te quedaste en (${fmtCorto(nota.date)}):</span> ${nota.note}</div>` : sig.n ? html`<div class="muted small">${fmtMin(sig.min)} estudiados en este tema</div>` : null}
+            <div class="btns"><button class="btn primary" onClick=${() => openRegistroGlobal({ temaId: v.siguiente.id, tipo: 'estudio' })}><${Icon} n="clock" s=${18} /> Registrar estudio</button>
+              <button class="btn" onClick=${() => openRegistroGlobal({ temaId: v.siguiente.id, tipo: 'vuelta' })}><${Icon} n="check" s=${18} /> Vuelta completa</button></div>` : html`<div class="opt-t">¡Vuelta terminada!</div>`}
         </div>
         <div class="opt">
           <div class="opt-h"><span class="tag repaso">Repasar</span><span class="muted small">${pend.length ? `${pend.length} pendiente${pend.length > 1 ? 's' : ''}` : 'Nada pendiente'}</span></div>
-          ${pend.length ? html`<ul class="mini">${pend.slice(0, 4).map(({ t, s: sc }) => html`<li>
+          ${pend.length ? html`<ul class="mini">${pend.slice(0, 4).map(({ t, i }) => html`<li>
               <button class="link" onClick=${() => go('#/tema/' + t.id)}><b>T${t.id}</b> ${t.titulo}</button>
-              <span class="muted small">${sc.next < hoy ? 'atrasado ' + fmtRel(sc.next) : 'toca hoy'}</span>
-              <button class="btn sm" onClick=${() => openRegistroGlobal({ temaId: t.id, tipo: 'repaso' })}>Repasado</button></li>`)}</ul>` : null}
+              <span class="muted small">${i.proximo < hoy ? 'tocaba ' + fmtRel(i.proximo) : 'toca hoy'}</span>
+              <button class="btn sm" onClick=${() => openRegistroGlobal({ temaId: t.id, tipo: 'repaso' })}>Repasado</button></li>`)}</ul>` : html`<p class="muted small">Los temas aparecen aquí en la fecha que elijas al registrar una vuelta o un repaso.</p>`}
           <div class="pick">
-            <select value=${otro} onChange=${(e) => setOtro(e.target.value)} aria-label="Elegir tema anterior">
-              <option value="">${estudiados.length ? 'Repasar otro tema anterior…' : 'Aún no has estudiado ningún tema'}</option>
-              ${estudiados.map((t) => html`<option value=${t.id}>Tema ${t.id} · ${t.titulo}</option>`)}
+            <select value=${otro} onChange=${(e) => setOtro(e.target.value)} aria-label="Elegir tema">
+              <option value="">Registrar en otro tema…</option>
+              ${TEMAS.map((t) => html`<option value=${t.id}>Tema ${t.id} · ${t.titulo}</option>`)}
             </select>
-            <button class="btn" disabled=${!otro} onClick=${() => { openRegistroGlobal({ temaId: +otro, tipo: 'repaso' }); setOtro(''); }}>Repasar</button>
+            <button class="btn" disabled=${!otro} onClick=${() => { openRegistroGlobal({ temaId: +otro, tipo: 'repaso' }); setOtro(''); }}>Abrir</button>
           </div>
         </div>
       </div>
@@ -166,8 +187,8 @@ function Hoy() {
 
     <section class="card">
       <h2>Horas de hoy: ${fmtMin(minHoy)}</h2>
-      ${objetivo ? html`<div class="progress"><div style=${{ width: Math.min(100, (minSemana / objetivo) * 100) + '%' }}></div></div>
-        <p class="muted small">${fmtMin(minSemana)} de ${s.settings.horasObjetivoSemana} h esta semana</p>` : null}
+      ${objH ? html`<div class="progress"><div style=${{ width: Math.min(100, (minSemana / objH) * 100) + '%' }}></div></div>
+        <p class="muted small">${fmtMin(minSemana)} de ${s.settings.horasObjetivoSemana} h esta semana · las horas de "Registrar estudio" se suman solas</p>` : null}
       <${AddHoras} date=${hoy} />
     </section>
   </div>`;
@@ -195,7 +216,7 @@ function AddHoras({ date }) {
 function TaskList({ tasks, empty, compact }) {
   if (!tasks.length) return html`<p class="empty">${empty}</p>`;
   const toggle = (k) => {
-    if (!k.done && k.temaId) openRegistroGlobal({ temaId: k.temaId, tipo: k.kind === 'nuevo' ? 'vuelta' : 'repaso', taskId: k.id });
+    if (!k.done && k.temaId) openRegistroGlobal({ temaId: k.temaId, tipo: k.kind === 'nuevo' ? 'estudio' : 'repaso', taskId: k.id });
     else update((s) => { const x = s.tasks.find((y) => y.id === k.id); x.done = !x.done; });
   };
   return html`<ul class=${'tasks ' + (compact ? 'compact' : '')}>${tasks.map((k) => html`<li class=${k.done ? 'done' : ''}>
@@ -230,22 +251,26 @@ function AddTask({ date }) {
 }
 
 // ---------- TEMARIO ----------
+const CLASES = [
+  ['todos', 'Todos'], ['sinempezar', 'Sin empezar'], ['rojo', 'No lo sé'], ['amarillo', 'Flojo'], ['verde', 'Dominado'], ['sinmarcar', 'Empezados sin clasificar'], ['pendientes', 'Repaso pendiente'],
+];
 function Temario() {
   const s = useStore();
   const [filtro, setFiltro] = useState('todos');
   const hoy = today();
   const v = L.resumenVueltas(s.temas);
   const rows = TEMAS.map((t) => {
-    const regs = regsDe(s, t.id);
-    const sc = schedule(regs);
-    const est = dominio(regs, hoy);
-    return { t, sc, est, manual: s.temas[t.id]?.semaforo || null, aviso: L.aviso(s.temas[t.id]?.semaforo, est, sc.n) };
+    const tm = s.temas[t.id];
+    const i = L.infoTema(tm);
+    const est = L.dominio(tm, hoy);
+    return { t, i, est, clase: L.clase(tm), manual: tm?.semaforo || null, aviso: L.aviso(tm?.semaforo, est) };
   });
-  const visibles = rows.filter((r) => filtro === 'todos' || (filtro === 'pendientes' && r.sc.n && r.sc.next <= hoy) || (filtro === 'flojos' && r.sc.n && r.est < 50) || (filtro === 'sin' && !r.sc.n));
-  const media = Math.round(rows.reduce((a, r) => a + r.est, 0) / rows.length);
+  const pasa = (r, f) => f === 'todos' || (f === 'pendientes' ? r.i.proximo && r.i.proximo <= hoy : r.clase === f);
+  const visibles = rows.filter((r) => pasa(r, filtro));
+  const objetivo = L.objetivoVuelta(s.settings, v.actual);
   return html`<div class="page">
-    <header class="ph"><div><div class="muted cap">Vuelta ${v.actual} · ${v.hechos}/45 temas · dominio medio ${media} %</div><h1>Temario</h1></div></header>
-    <div class="filters">${[['todos', 'Todos'], ['pendientes', 'Repaso pendiente'], ['flojos', 'Flojos (<50 %)'], ['sin', 'Sin empezar']].map(([k, l]) => html`<button class=${'chip ' + (filtro === k ? 'on' : '')} onClick=${() => setFiltro(k)}>${l}</button>`)}</div>
+    <header class="ph"><div><div class="muted cap">Vuelta ${v.actual} · ${v.hechos}/45 temas${objetivo ? ' · objetivo ' + fmtCorto(objetivo) : ''}</div><h1>Temario</h1></div></header>
+    <div class="filters">${CLASES.map(([k, l]) => { const n = rows.filter((r) => pasa(r, k)).length; return (k === 'sinmarcar' || k === 'pendientes') && !n && filtro !== k ? null : html`<button class=${'chip ' + (filtro === k ? 'on' : '')} onClick=${() => setFiltro(k)}>${l} <span class="cnt">${n}</span></button>`; })}</div>
     ${Object.entries(BLOQUES).map(([b, nombre]) => {
       const list = visibles.filter((r) => r.t.bloque === b);
       if (!list.length) return null;
@@ -254,9 +279,10 @@ function Temario() {
         <div class="tlist">${list.map((r) => html`<a class="trow" href=${'#/tema/' + r.t.id}>
           <span class="tnum">${r.t.id}</span>
           <span class="tmain"><span class="ttit">${r.t.titulo}${r.aviso ? html` <span class="warn-ico" title=${r.aviso}><${Icon} n="alert" s=${14} /></span>` : null}</span>
-            <span class="tmeta">${r.manual ? html`<${Semaforo} value=${r.manual} small />` : null}<span class="muted small">${r.sc.vueltas} vuelta${r.sc.vueltas === 1 ? '' : 's'}${r.sc.n > r.sc.vueltas ? ` · ${r.sc.n - r.sc.vueltas} repasos` : ''}</span>
-            ${r.sc.n ? html`<span class=${'small ' + (r.sc.next <= hoy ? 'due' : 'muted')}>${r.sc.next < hoy ? 'Repaso atrasado' : 'Repaso ' + fmtRel(r.sc.next)}</span>` : null}</span></span>
-          <span class="tdom"><span class="small">${r.est} %</span><${Barra} pct=${r.est} /></span>
+            <span class="tmeta">${r.manual ? html`<${Semaforo} value=${r.manual} small />` : r.i.n ? html`<span class="sem vacio sm">Sin clasificar</span>` : null}
+              <span class="muted small">${r.i.vueltas} vuelta${r.i.vueltas === 1 ? '' : 's'}${r.i.min ? ' · ' + fmtMin(r.i.min) : ''}</span>
+              ${r.i.proximo ? html`<span class=${'small ' + (r.i.proximo <= hoy ? 'due' : 'muted')}>${r.i.proximo < hoy ? 'Repaso atrasado' : 'Repaso ' + fmtRel(r.i.proximo)}</span>` : null}</span></span>
+          <span class="tdom">${r.est === null ? html`<span class="small muted">—</span>` : html`<span class="small">${r.est} %</span><${Barra} pct=${r.est} />`}</span>
         </a>`)}</div></section>`;
     })}
     ${!visibles.length ? html`<p class="empty">No hay temas con ese filtro.</p>` : null}
@@ -267,40 +293,59 @@ function TemaDetalle({ id }) {
   const s = useStore();
   const t = temaDe(id);
   if (!t) return html`<div class="page"><p>Tema no encontrado.</p></div>`;
-  const regs = regsDe(s, id);
-  const sc = schedule(regs);
-  const est = dominio(regs);
-  const manual = s.temas[id]?.semaforo || null;
-  const aviso = L.aviso(manual, est, sc.n);
-  const setSem = (v) => update((st) => { st.temas[id] = st.temas[id] || { semaforo: null, regs: [] }; st.temas[id].semaforo = st.temas[id].semaforo === v ? null : v; });
+  const tm = s.temas[id];
+  const i = L.infoTema(tm);
+  const est = L.dominio(tm);
+  const manual = tm?.semaforo || null;
+  const aviso = L.aviso(manual, est);
+  const hoy = today();
+  const nota = notaDesdeVuelta(i) || i.nota;
+  const ensure = (st) => (st.temas[id] = st.temas[id] || { semaforo: null, regs: [], proximo: null });
+  const setSem = (v) => update((st) => { const x = ensure(st); x.semaforo = x.semaforo === v ? null : v; });
+  const setProx = (d) => update((st) => { ensure(st).proximo = d || null; });
+  const borrar = (r) => confirm('¿Borrar este registro?') && update((st) => {
+    st.temas[id].regs = st.temas[id].regs.filter((x) => x.id !== r.id);
+    st.horas = st.horas.filter((h) => h.regId !== r.id);
+  });
   return html`<div class="page">
     <header class="ph"><div><a class="muted small back" href="#/temario"><${Icon} n="left" s=${14} /> Temario</a>
       <div class="muted cap">Tema ${t.id} · ${BLOQUES[t.bloque]}</div><h1>${t.titulo}</h1></div>
       <div class="nav-t">${id > 1 ? html`<a class="icon-btn" href=${'#/tema/' + (id - 1)} aria-label="Tema anterior"><${Icon} n="left" /></a>` : null}
         ${id < 45 ? html`<a class="icon-btn" href=${'#/tema/' + (id + 1)} aria-label="Tema siguiente"><${Icon} n="right" /></a>` : null}</div></header>
-    <div class="kpis">
-      <div class="kpi"><div class="k-l">Dominio estimado</div><div class="k-v">${est}<small> %</small></div><${Barra} pct=${est} /></div>
-      <div class="kpi"><div class="k-l">Vueltas</div><div class="k-v">${sc.vueltas}</div><div class="k-s">${sc.n - sc.vueltas} repaso${sc.n - sc.vueltas === 1 ? '' : 's'}</div></div>
-      <div class="kpi"><div class="k-l">Próximo repaso</div><div class=${'k-v sm ' + (sc.next && sc.next < today() ? 'due' : '')}>${sc.next ? (sc.next < today() ? 'Atrasado' : fmtRel(sc.next)) : '—'}</div><div class="k-s">${sc.next ? (sc.next < today() ? 'tocaba ' + fmtRel(sc.next) : fmtCorto(sc.next)) : 'Aún sin estudiar'}</div></div>
-    </div>
-    ${aviso ? html`<div class="note warn"><${Icon} n="alert" s=${16} /> ${aviso}</div>` : null}
+
     <section class="card">
-      <h2>Cómo lo llevo (tu valoración)</h2>
-      <div class="semsel">${Object.entries(L.SEMAFORO).map(([k, m]) => html`<button class=${'sembtn ' + k + (manual === k ? ' on' : '')} onClick=${() => setSem(k)} aria-pressed=${manual === k}><i></i>${m.label}</button>`)}</div>
-      <p class="muted small">La estimación de la app sale de tus valoraciones en cada vuelta o repaso, del número de vueltas y del tiempo que ha pasado sin tocar el tema.</p>
-    </section>
-    <section class="card">
-      <div class="card-h"><h2>Registrar</h2></div>
-      <div class="btns">
-        <button class="btn primary" onClick=${() => openRegistroGlobal({ temaId: id, tipo: 'vuelta' })}>+ Vuelta completa</button>
-        <button class="btn" onClick=${() => openRegistroGlobal({ temaId: id, tipo: 'repaso' })}>+ Repaso</button>
+      <h2>Registrar</h2>
+      <div class="reg3">
+        <button class="regbtn" onClick=${() => openRegistroGlobal({ temaId: id, tipo: 'estudio' })}><${Icon} n="clock" /><b>Estudio</b><span>Minutos y por dónde vas</span></button>
+        <button class="regbtn" onClick=${() => openRegistroGlobal({ temaId: id, tipo: 'repaso' })}><${Icon} n="hoy" /><b>Repaso</b><span>Cómo te lo sabías</span></button>
+        <button class="regbtn main" onClick=${() => openRegistroGlobal({ temaId: id, tipo: 'vuelta' })}><${Icon} n="check" /><b>Vuelta completa</b><span>Suma al contador</span></button>
       </div>
     </section>
+
+    <div class="kpis">
+      <div class="kpi"><div class="k-l">Vueltas</div><div class="k-v">${i.vueltas}</div><div class="k-s">${i.ultimaVuelta ? 'última terminada el ' + fmtCorto(i.ultimaVuelta.date) : 'ninguna terminada'}</div></div>
+      <div class="kpi"><div class="k-l">Volver a darlo</div>
+        <input class="kpi-date" type="date" value=${i.proximo || ''} onInput=${(e) => setProx(e.target.value)} aria-label="Fecha para volver a darlo" />
+        <div class=${'k-s ' + (i.proximo && i.proximo <= hoy ? 'due' : '')}>${i.proximo ? (i.proximo < hoy ? 'atrasado: tocaba ' + fmtRel(i.proximo) : fmtRel(i.proximo)) : 'sin fecha'}${i.proximo ? html` · <button class="link small" onClick=${() => setProx(null)}>quitar</button>` : null}</div></div>
+      <div class="kpi"><div class="k-l">Tiempo estudiado</div><div class="k-v sm">${i.min ? fmtMin(i.min) : '—'}</div><div class="k-s">${((n) => `${n} sesi${n === 1 ? 'ón' : 'ones'} de estudio`)(i.regs.filter((r) => r.tipo === 'estudio').length)}</div></div>
+    </div>
+
+    ${nota ? html`<section class="card quedaste-card"><div class="k-l">Por dónde te quedaste · ${fmtCorto(nota.date)}</div><p>${nota.note}</p></section>` : null}
+
+    <section class="card">
+      <h2>Cómo lo llevo</h2>
+      <div class="semsel">${Object.entries(L.SEMAFORO).map(([k, m]) => html`<button class=${'sembtn ' + k + (manual === k ? ' on' : '')} onClick=${() => setSem(k)} aria-pressed=${manual === k}><i></i>${m.label}</button>`)}</div>
+      ${aviso ? html`<div class="note warn"><${Icon} n="alert" s=${16} /> ${aviso}</div>` : null}
+      <p class="muted small">${est === null ? 'Cuando valores un repaso o una vuelta, aquí verás también una estimación orientativa.' : `Estimación orientativa según tus valoraciones: ${est} %.`}</p>
+    </section>
+
     <section class="card">
       <h2>Historial</h2>
-      ${sc.list.length ? html`<ul class="hist">${[...sc.list].reverse().map((r) => { const R = L.RATINGS[r.rating - 1]; return html`<li>
-        <span>${fmtCorto(r.date)}</span><span class=${'tag ' + (r.tipo === 'vuelta' ? 'estudio' : 'repaso')}>${r.tipo === 'vuelta' ? 'Vuelta' : 'Repaso'}</span><span>${R.emoji} ${R.label}</span>
-        <button class="icon-btn sm" aria-label="Borrar registro" onClick=${() => confirm('¿Borrar este registro?') && update((st) => { st.temas[id].regs = st.temas[id].regs.filter((x) => x.id !== r.id); })}><${Icon} n="trash" s=${15} /></button></li>`; })}</ul>` : html`<p class="empty">Aún no hay registros.</p>`}
+      ${i.regs.length ? html`<ul class="hist2">${[...i.regs].reverse().map((r) => { const R = r.rating ? L.RATINGS[r.rating - 1] : null; return html`<li>
+        <div class="h-top"><span class="h-date">${fmtCorto(r.date)}</span><span class=${'tag ' + ({ vuelta: 'estudio', repaso: 'repaso', estudio: 'otro' }[r.tipo] || 'otro')}>${L.TIPO_REG[r.tipo] || r.tipo}</span>
+          ${r.min ? html`<span class="small muted">${fmtMin(r.min)}</span>` : null}${R ? html`<span class="small">${R.emoji} ${R.label}</span>` : null}
+          <button class="icon-btn sm push" aria-label="Borrar registro" onClick=${() => borrar(r)}><${Icon} n="trash" s=${15} /></button></div>
+        ${r.note ? html`<div class="h-note">${r.note}</div>` : null}</li>`; })}</ul>` : html`<p class="empty">Aún no hay registros.</p>`}
     </section>
   </div>`;
 }
@@ -352,17 +397,19 @@ function PlanSemana({ s, day, setRef, setVista }) {
   const auto = () => {
     const from = ini < hoy ? hoy : ini, to = addDays(ini, 6);
     if (from > to) { setMsg('Esta semana ya ha pasado.'); return; }
-    const nuevas = L.autoplan(s, from, to);
-    if (!nuevas.length) { setMsg('No hay nada nuevo que añadir: la semana ya está planificada.'); return; }
-    update((st) => nuevas.forEach((k) => st.tasks.push({ id: L.uid(), done: false, ...k })));
-    setMsg(`Añadidas ${nuevas.length} tareas (temas nuevos y repasos que vencen). Puedes borrar o mover las que quieras.`);
+    const esAuto = (k) => !k.done && k.date >= from && k.date <= to && (k.auto || (k.kind && /^(Tema \d+ \(vuelta \d+\)|Repasar tema \d+)$/.test(k.title)));
+    const base = { ...s, tasks: s.tasks.filter((k) => !esAuto(k)) };
+    const { nuevas, avisos } = L.autoplan(base, from, to);
+    const quitadas = s.tasks.length - base.tasks.length;
+    update((st) => { st.tasks = st.tasks.filter((k) => !esAuto(k)); nuevas.forEach((k) => st.tasks.push({ id: L.uid(), done: false, ...k })); });
+    setMsg([`${nuevas.length} tareas planificadas${quitadas ? ` (sustituyen a ${quitadas} automáticas anteriores)` : ''}. Tus tareas manuales no se tocan.`, ...avisos].join(' '));
   };
   const minSem = minutosEntre(s, ini, addDays(ini, 6));
   const obj = s.settings.horasObjetivoSemana || 0;
   return html`
     <section class="card">
       <div class="card-h"><h2>Semana</h2><button class="btn primary sm" onClick=${auto}><${Icon} n="wand" s=${16} /> Autoplanificar</button></div>
-      <p class="muted small">Autoplanificar reparte ${s.settings.nuevosPorDia} tema${s.settings.nuevosPorDia > 1 ? 's' : ''} nuevo${s.settings.nuevosPorDia > 1 ? 's' : ''} al día y hasta ${s.settings.maxRepasosDia} repasos de los que te tocan (arrastre), en tus días de estudio.</p>
+      <p class="muted small">Autoplanificar mete primero los temas que te faltan de la vuelta actual (repartidos hasta tu fecha objetivo) y después los repasos en las fechas que tú elegiste. Puedes volver a pulsarlo cuando quieras: rehace solo las tareas automáticas.</p>
       ${msg ? html`<div class="note">${msg}</div>` : null}
       <div class="week">${dias.map((d) => { const ts = s.tasks.filter((k) => k.date === d); const m = minutosEntre(s, d, d); return html`<div class=${'wday ' + (d === hoy ? 'today' : '')}>
         <button class="wday-h" onClick=${() => { setRef(d); setVista('dia'); }}><span>${L.DIAS_CORTO[L.weekday(d)]} ${L.parse(d).getDate()}</span>${m ? html`<span class="muted small">${fmtMin(m)}</span>` : null}</button>
@@ -506,27 +553,24 @@ function Progreso() {
   const v = L.resumenVueltas(s.temas);
   const maxV = Math.max(v.actual, ...v.counts);
   const porVuelta = Array.from({ length: maxV }, (_, i) => v.counts.filter((c) => c >= i + 1).length);
-  // Ritmo: temas avanzados (vueltas) en los últimos 14 días.
   const regs = Object.values(s.temas).flatMap((t) => t.regs || []);
   const avance14 = regs.filter((r) => r.tipo === 'vuelta' && r.date > addDays(hoy, -14)).length / 14;
   const restantes = 45 - v.hechos;
-  const diasExamen = s.settings.examDate ? L.diffDays(hoy, s.settings.examDate) : null;
-  const necesario = diasExamen > 0 ? restantes / diasExamen : null;
+  const objetivo = L.objetivoVuelta(s.settings, v.actual);
+  const diasObj = objetivo ? L.diffDays(hoy, objetivo) + 1 : null;
+  const necesario = diasObj > 0 ? restantes / diasObj : null;
   const fin = avance14 > 0 ? addDays(hoy, Math.ceil(restantes / avance14)) : null;
-  const ests = TEMAS.map((t) => dominio(regsDe(s, t.id), hoy));
-  const dist = { rojo: 0, amarillo: 0, verde: 0 };
-  TEMAS.forEach((t, i) => { if (regsDe(s, t.id).length) dist[L.semaforoDe(ests[i])]++; });
-  const sinEmpezar = TEMAS.filter((t) => !regsDe(s, t.id).length).length;
-  const olvidados = TEMAS.map((t, i) => ({ t, sc: schedule(regsDe(s, t.id)), e: ests[i] })).filter((x) => x.sc.n && x.sc.next < hoy).sort((a, b) => (a.sc.next < b.sc.next ? -1 : 1)).slice(0, 5);
-  const bloques = Object.entries(BLOQUES).map(([b, n]) => { const ids = TEMAS.filter((t) => t.bloque === b); return { n, pct: Math.round(ids.reduce((a, t) => a + ests[t.id - 1], 0) / ids.length) }; });
+  const clases = { sinempezar: 0, rojo: 0, amarillo: 0, verde: 0, sinmarcar: 0 };
+  TEMAS.forEach((t) => { clases[L.clase(s.temas[t.id])]++; });
+  const atrasados = L.pendientes(s.temas, addDays(hoy, -1)).slice(0, 6);
   return html`<div class="page">
     <header class="ph"><div><div class="muted cap">Estadísticas</div><h1>Progreso</h1></div></header>
     <section class="card">
-      <h2>Ritmo de la vuelta ${v.actual}</h2>
+      <h2>Ritmo de la vuelta ${v.actual}${objetivo ? ` · objetivo ${fmtCorto(objetivo)}` : ''}</h2>
       <div class="kpis inner">
-        <div class="kpi"><div class="k-l">Tu ritmo (14 días)</div><div class="k-v sm">${avance14.toFixed(2).replace('.', ',')}</div><div class="k-s">temas/día</div></div>
-        <div class="kpi"><div class="k-l">Necesario</div><div class="k-v sm">${necesario === null ? '—' : necesario.toFixed(2).replace('.', ',')}</div><div class="k-s">${necesario === null ? 'pon la fecha del examen' : 'temas/día para cerrar la vuelta'}</div></div>
-        <div class="kpi"><div class="k-l">Terminarías</div><div class="k-v sm">${fin ? fmtCorto(fin) : '—'}</div><div class="k-s">${fin && s.settings.examDate ? (fin <= s.settings.examDate ? '✓ antes del examen' : '✗ después del examen') : 'a este ritmo'}</div></div>
+        <div class="kpi"><div class="k-l">Tu ritmo (14 días)</div><div class="k-v sm">${avance14.toFixed(2).replace('.', ',')}</div><div class="k-s">vueltas de tema al día</div></div>
+        <div class="kpi"><div class="k-l">Necesario</div><div class="k-v sm">${necesario === null ? '—' : necesario.toFixed(2).replace('.', ',')}</div><div class="k-s">${necesario === null ? html`<a href="#/ajustes">pon una fecha objetivo</a>` : `al día para ${restantes} temas que faltan`}</div></div>
+        <div class="kpi"><div class="k-l">Terminarías</div><div class="k-v sm">${fin ? fmtCorto(fin) : '—'}</div><div class="k-s">${fin && objetivo ? (fin <= objetivo ? '✓ a tiempo' : '✗ después del objetivo') : 'a este ritmo'}</div></div>
       </div>
     </section>
     <section class="card"><h2>Horas de estudio · últimos 30 días</h2>
@@ -534,20 +578,20 @@ function Progreso() {
       <p class="muted small">Total: ${fmtMin(horas.reduce((a, d) => a + d.v, 0))} · media ${fmtMin(horas.reduce((a, d) => a + d.v, 0) / 30)} al día</p></section>
     <div class="grid2">
       <section class="card"><h2>Temas completados por vuelta</h2>
-        ${porVuelta.map((n, i) => html`<div class="hbar"><span class="small">Vuelta ${i + 1}</span><div class="progress"><div style=${{ width: (n / 45) * 100 + '%' }}></div></div><span class="small">${n}/45</span></div>`)}
+        ${porVuelta.map((n, i) => { const o = L.objetivoVuelta(s.settings, i + 1); return html`<div class="hbar"><span class="small">Vuelta ${i + 1}${o ? html`<br /><span class="muted">obj. ${fmtCorto(o)}</span>` : null}</span><div class="progress"><div style=${{ width: (n / 45) * 100 + '%' }}></div></div><span class="small">${n}/45</span></div>`; })}
       </section>
-      <section class="card"><h2>Dominio estimado</h2>
+      <section class="card"><h2>Cómo lo llevas (según tú)</h2>
         <div class="dist">
-          <div><${Semaforo} value="verde" small /><b>${dist.verde}</b></div>
-          <div><${Semaforo} value="amarillo" small /><b>${dist.amarillo}</b></div>
-          <div><${Semaforo} value="rojo" small /><b>${dist.rojo}</b></div>
-          <div><span class="sem vacio sm">Sin empezar</span><b>${sinEmpezar}</b></div>
+          <div><${Semaforo} value="verde" small /><b>${clases.verde}</b></div>
+          <div><${Semaforo} value="amarillo" small /><b>${clases.amarillo}</b></div>
+          <div><${Semaforo} value="rojo" small /><b>${clases.rojo}</b></div>
+          <div><span class="sem vacio sm">Sin empezar</span><b>${clases.sinempezar}</b></div>
+          ${clases.sinmarcar ? html`<div><span class="sem vacio sm">Sin clasificar</span><b>${clases.sinmarcar}</b></div>` : null}
         </div>
-        ${bloques.map((b) => html`<div class="hbar"><span class="small">${b.n}</span><${Barra} pct=${b.pct} /><span class="small">${b.pct} %</span></div>`)}
       </section>
     </div>
-    <section class="card"><h2>Temas más olvidados</h2>
-      ${olvidados.length ? html`<ul class="hist">${olvidados.map((o) => html`<li><a href=${'#/tema/' + o.t.id}><b>T${o.t.id}</b> ${o.t.titulo}</a><span class="due small">${fmtRel(o.sc.next)}</span><span class="small">${o.e} %</span></li>`)}</ul>` : html`<p class="empty">Ningún repaso atrasado. 👌</p>`}
+    <section class="card"><h2>Repasos atrasados</h2>
+      ${atrasados.length ? html`<ul class="hist">${atrasados.map(({ t, i }) => html`<li><a href=${'#/tema/' + t.id}><b>T${t.id}</b> ${t.titulo}</a><span class="due small">tocaba ${fmtRel(i.proximo)}</span><span></span></li>`)}</ul>` : html`<p class="empty">Ningún repaso atrasado. 👌</p>`}
     </section>
   </div>`;
 }
@@ -557,6 +601,9 @@ function Ajustes() {
   const s = useStore();
   const st = s.settings;
   const set = (k, v) => update((x) => { x.settings[k] = v; });
+  const objs = st.objetivosVuelta || [];
+  const setObj = (i, d) => update((x) => { const a = [...(x.settings.objetivosVuelta || [])]; a[i] = d; x.settings.objetivosVuelta = a; });
+  const quitarObj = (i) => update((x) => { x.settings.objetivosVuelta = (x.settings.objetivosVuelta || []).filter((_, k) => k !== i); });
   const exportar = () => {
     const blob = new Blob([JSON.stringify(s, null, 2)], { type: 'application/json' });
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `oposicion-pn-${today()}.json`; a.click();
@@ -569,22 +616,33 @@ function Ajustes() {
   return html`<div class="page">
     <header class="ph"><div><div class="muted cap">Configuración</div><h1>Ajustes</h1></div></header>
     <section class="card"><h2>Sincronización</h2><${CloudBox} /></section>
-    <section class="card"><h2>Apariencia</h2>
-      <div class="seg">${[['auto', 'Automático'], ['light', 'Claro'], ['dark', 'Oscuro']].map(([k, l]) => html`<button class=${st.theme === k ? 'on' : ''} onClick=${() => set('theme', k)}>${l}</button>`)}</div></section>
     <section class="card"><h2>Oposición</h2>
       <div class="form">
         <label>Fecha del examen<input type="date" value=${st.examDate} onInput=${(e) => set('examDate', e.target.value)} /></label>
         <label>Baremo de pruebas físicas<select value=${st.sexo} onChange=${(e) => set('sexo', e.target.value)}><option value="H">Hombres</option><option value="M">Mujeres</option></select></label>
         <label>Objetivo de horas por semana<input type="number" min="0" value=${st.horasObjetivoSemana} onInput=${(e) => set('horasObjetivoSemana', +e.target.value || 0)} /></label>
       </div></section>
-    <section class="card"><h2>Autoplanificación (arrastre)</h2>
+    <section class="card"><h2>Objetivos de vueltas</h2>
+      <p class="muted small">¿Cuándo quieres terminar cada vuelta entera? Autoplanificar reparte los temas que faltan hasta esa fecha.</p>
+      <div class="objs">${[...objs, ''].slice(0, objs.length + 1).map((d, i) => html`<div class="objrow">
+        <span class="small"><b>Vuelta ${i + 1}</b></span>
+        <input type="date" value=${d || ''} min=${i ? objs[i - 1] || '' : ''} onInput=${(e) => setObj(i, e.target.value)} aria-label=${'Fecha objetivo vuelta ' + (i + 1)} />
+        ${i < objs.length ? html`<button class="icon-btn sm" aria-label="Quitar" onClick=${() => quitarObj(i)}><${Icon} n="trash" s=${15} /></button>` : html`<span class="muted small">${i ? 'añadir siguiente' : ''}</span>`}
+      </div>`)}</div>
+      ${st.examDate ? html`<p class="muted small">Examen: ${fmtCorto(st.examDate)}</p>` : null}
+    </section>
+    <section class="card"><h2>Autoplanificación</h2>
       <div class="form">
-        <label>Temas nuevos por día<input type="number" min="0" max="5" value=${st.nuevosPorDia} onInput=${(e) => set('nuevosPorDia', Math.max(0, +e.target.value || 0))} /></label>
         <label>Máximo de repasos por día<input type="number" min="0" max="10" value=${st.maxRepasosDia} onInput=${(e) => set('maxRepasosDia', Math.max(0, +e.target.value || 0))} /></label>
+        <label>Temas por día si no hay fecha objetivo<input type="number" min="0" max="5" value=${st.nuevosPorDia} onInput=${(e) => set('nuevosPorDia', Math.max(0, +e.target.value || 0))} /></label>
       </div>
+      <label class="toggle"><input type="checkbox" checked=${!!st.repasosEnPrimeraVuelta} onChange=${(e) => set('repasosEnPrimeraVuelta', e.target.checked)} />
+        <span>Incluir repasos en el plan durante la 1ª vuelta<br /><span class="muted small">Desactivado: el plan solo mete temas sin dar hasta acabar la 1ª vuelta; los repasos, después.</span></span></label>
       <label class="lbl">Días de estudio</label>
       <div class="days">${L.DIAS_CORTO.map((d, i) => html`<button class=${'chip ' + (st.diasEstudio.includes(i) ? 'on' : '')} onClick=${() => set('diasEstudio', st.diasEstudio.includes(i) ? st.diasEstudio.filter((x) => x !== i) : [...st.diasEstudio, i].sort())}>${d}</button>`)}</div>
     </section>
+    <section class="card"><h2>Apariencia</h2>
+      <div class="seg">${[['auto', 'Automático'], ['light', 'Claro'], ['dark', 'Oscuro']].map(([k, l]) => html`<button class=${st.theme === k ? 'on' : ''} onClick=${() => set('theme', k)}>${l}</button>`)}</div></section>
     <section class="card"><h2>Copia de seguridad</h2>
       <p class="muted small">Descarga todos tus datos en un archivo. Guárdalo de vez en cuando por si acaso.</p>
       <div class="btns"><button class="btn" onClick=${exportar}>Descargar copia</button>

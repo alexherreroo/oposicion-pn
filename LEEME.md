@@ -64,12 +64,15 @@ Funciona sin conexión: los cambios se guardan y se sincronizan al volver intern
 
 ## Cómo funciona
 
-- **Vueltas:** en *Hoy* o en la ficha de un tema pulsa *Vuelta completa* (cuenta una vuelta) o *Repaso* (no suma vuelta). Valora cómo te lo sabías: 😣 Mal · 😐 Regular · 🙂 Bien · 😎 Fácil.
-- **Repetición espaciada:** con esa valoración la app calcula cuándo vuelve a tocarte el tema (Mal → mañana; Fácil → bastantes días después; máx. 60 días).
-- **Dominio estimado (%):** sale de tus últimas valoraciones, del número de vueltas y de cuánto tiempo llevas sin tocar el tema (baja poco a poco si no repasas). Tu semáforo manual (No lo sé / Flojo / Dominado) se guarda aparte y la app te avisa ⚠️ si no cuadra con la estimación.
-- **Hoy:** eliges entre **avanzar** (siguiente tema de la vuelta) o **repasar** (los que te tocan, o cualquier tema anterior).
-- **Plan:** vistas Día / Semana / Mes, tareas propias (academia, simulacro, entreno…), objetivos semanales y mensuales. **Autoplanificar** rellena la semana con temas nuevos + repasos que vencen (arrastre). Configura cuántos en *Ajustes*.
-- **Físicas:** registra tus marcas; ves evolución y nota aproximada. ⚠️ Los puntos son una **estimación** interpolada entre las marcas de 0, 5 y 10 puntos; compruébalo con el anexo del baremo oficial de tu convocatoria. Las anclas están en `js/logic.js` (`BAREMO`) por si cambian.
+- **Dentro de cada tema** tienes tres botones:
+  - **Estudio:** apuntas los minutos y una nota de cómo ha ido o por dónde te has quedado. La última nota se ve en la ficha del tema y en *Hoy* ("Te quedaste en…"). Los minutos se suman a tus horas.
+  - **Repaso:** valoras cómo te lo sabías (😣 Mal · 😐 Regular · 🙂 Bien · 😎 Fácil) y eliges **tú** cuándo volver a repasarlo.
+  - **Vuelta completa:** es el contador de vueltas. Pones la fecha en que la terminaste, si quieres cómo ha ido, y **la fecha en que quieres volver a darlo**.
+- **La fecha para volver a dar un tema siempre la eliges tú.** Puedes cambiarla o quitarla en la ficha del tema ("Volver a darlo"). Ese día el tema aparece en *Hoy → Repasar*.
+- **Temario:** filtra por *Sin empezar / No lo sé / Flojo / Dominado* según lo que marques tú en "Cómo lo llevo". El % es solo una estimación orientativa a partir de tus valoraciones.
+- **Plan → Autoplanificar:** primero mete los temas que te faltan de la vuelta actual, repartidos hasta la fecha objetivo de esa vuelta. Si te toca menos de un tema al día, pone "Seguir tema X". Después mete los repasos en las fechas que elegiste; durante la 1ª vuelta solo lo hace si lo activas en *Ajustes*. Puedes pulsarlo las veces que quieras: rehace solo las tareas automáticas y no toca las tuyas.
+- **Ajustes → Objetivos de vueltas:** la fecha en que quieres terminar la vuelta 1, la 2, etc.
+- **Físicas:** registra tus marcas; ves evolución y nota aproximada. ⚠️ Los puntos son una **estimación** interpolada entre las marcas de 0, 5 y 10 puntos; compruébalo con el anexo del baremo oficial de tu convocatoria. Las anclas están en `logic.js` (`BAREMO`) por si cambian.
 - **Copia de seguridad:** *Ajustes → Descargar copia*. Hazlo de vez en cuando.
 
 ## Probarla en tu PC sin publicarla
@@ -78,4 +81,4 @@ Por seguridad, el navegador no deja abrir esta web con doble clic sobre `index.h
 
 ## Actualizar la web
 
-Si cambias archivos, sube la nueva versión en GitHub y cambia `pn-v1` por `pn-v2` en `sw.js` para que el móvil descargue la versión nueva.
+Si cambias archivos, sube la nueva versión en GitHub y cambia el número de `CACHE` (por ejemplo `pn-v3` → `pn-v4`) en `sw.js` para que el móvil descargue la versión nueva.

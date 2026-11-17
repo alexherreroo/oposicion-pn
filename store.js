@@ -15,8 +15,10 @@ export const defaultState = () => ({
     nuevosPorDia: 1,
     maxRepasosDia: 3,
     horasObjetivoSemana: 20,
+    objetivosVuelta: [], // fecha objetivo para terminar cada vuelta (índice 0 = vuelta 1)
+    repasosEnPrimeraVuelta: false,
   },
-  temas: {}, // { [id]: { semaforo, regs: [{id, date, tipo:'vuelta'|'repaso', rating}] } }
+  temas: {}, // { [id]: { semaforo, proximo, regs: [{id, date, tipo:'estudio'|'repaso'|'vuelta', min?, note?, rating?}] } }
   tasks: [], // { id, date, title, type, done, temaId?, kind? }
   goals: [], // { id, period:'semana'|'mes', key, text, done }
   horas: [], // { id, date, min, note }
