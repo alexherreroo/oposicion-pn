@@ -1,10 +1,9 @@
-// Pega aquí la configuración de tu proyecto de Firebase (ver LEEME.md, paso 2).
-// Mientras esté vacía, la app funciona en "modo local" (solo en este navegador).
+// Configuración de Firebase (ver LEEME.md, paso 2).
 export default {
-  apiKey: '',
-  authDomain: '',
-  projectId: '',
-  storageBucket: '',
-  messagingSenderId: '',
-  appId: '',
+  apiKey: 'AIzaSyC8•••••••••••••••••••••••••••••••',
+  authDomain: 'oposicion-pn.firebaseapp.com',
+  projectId: 'oposicion-pn',
+  storageBucket: 'oposicion-pn.firebasestorage.app',
+  messagingSenderId: '934025081967',
+  appId: '1:934025081967:web:21968d826f46c35387c99a',
 };
