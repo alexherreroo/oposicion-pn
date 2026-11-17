@@ -1,5 +1,5 @@
 // Estado de la app: se guarda en el navegador y, si Firebase está configurado, se sincroniza en la nube.
-import firebaseConfig from '../firebase-config.js';
+import firebaseConfig from './firebase-config.js';
 
 const KEY = 'pn-planner-v1';
 const FB = 'https://www.gstatic.com/firebasejs/10.12.2/';

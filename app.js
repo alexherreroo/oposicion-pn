@@ -1,4 +1,4 @@
-import { html, render, useState, useEffect, useMemo } from '../vendor/preact-htm.js';
+import { html, render, useState, useEffect, useMemo } from './preact-htm.js';
 import * as L from './logic.js';
 import { getState, subscribe, update, replaceAll, cloud, initCloud, login, logout, defaultState } from './store.js';
 
@@ -630,7 +630,7 @@ function App() {
   const active = route === 'tema' ? 'temario' : route;
   return html`<div class="shell">
     <nav class="side" aria-label="Secciones">
-      <div class="brand"><img src="icons/icon.svg" alt="" width="28" height="28" /><div><b>Oposición PN</b><span class="muted small">Escala Básica</span></div></div>
+      <div class="brand"><img src="icon.svg" alt="" width="28" height="28" /><div><b>Oposición PN</b><span class="muted small">Escala Básica</span></div></div>
       ${NAV.map(([k, l]) => html`<a class=${'nav ' + (active === k ? 'on' : '')} href=${'#/' + k} aria-current=${active === k ? 'page' : null}><${Icon} n=${k} /><span>${l}</span></a>`)}
       <div class="side-f"><${SyncDot} /></div>
     </nav>

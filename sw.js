@@ -1,7 +1,7 @@
 // Service worker: permite abrir la app sin conexión. Sube el número de versión al cambiar archivos.
-const CACHE = 'pn-v1';
-const APP = ['./', 'index.html', 'css/styles.css', 'js/app.js', 'js/logic.js', 'js/store.js', 'firebase-config.js',
-  'vendor/preact-htm.js', 'manifest.webmanifest', 'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png'];
+const CACHE = 'pn-v2';
+const APP = ['./', 'index.html', 'styles.css', 'app.js', 'logic.js', 'store.js', 'firebase-config.js',
+  'preact-htm.js', 'manifest.webmanifest', 'icon.svg', 'icon-192.png', 'icon-512.png'];
 
 self.addEventListener('install', (e) => { e.waitUntil(caches.open(CACHE).then((c) => c.addAll(APP))); self.skipWaiting(); });
 self.addEventListener('activate', (e) => {
