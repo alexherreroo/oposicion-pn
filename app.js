@@ -1,6 +1,7 @@
 import { html, render, useState, useEffect, useMemo } from './preact-htm.js';
 import * as L from './logic.js';
-import { getState, subscribe, update, replaceAll, cloud, initCloud, login, logout, defaultState } from './store.js';
+import { getState, subscribe, update, replaceAll, cloud, acceso, initCloud, login, logout, defaultState, urlPago, reComprobar, borrarMisDatos, adminListar, adminActivar, adminRevocar, adminAmpliarPrueba } from './store.js';
+import CONFIG from './app-config.js';
 
 const { TEMAS, BLOQUES, today, addDays, fmtRel, fmtCorto, fmtLargo, fmtMin, } = L;
 
@@ -35,6 +36,7 @@ const ICONS = {
   cloud: 'M17.5 19H8a6 6 0 115.7-8h1.3a4.5 4.5 0 012.5 8.2z',
   fire: 'M12 22c4 0 7-3 7-7 0-4-3-6-4-10-2 2-3 4-3 6-1-1-2-2-2-4-3 3-5 5-5 8 0 4 3 7 7 7z',
   clock: 'M12 7v5l3 2M12 22a10 10 0 100-20 10 10 0 000 20z',
+  admin: 'M12 3l8 3v6c0 5-3.5 8.5-8 9.5C7.5 20.5 4 17 4 12V6l8-3zM9 12l2 2 4-4',
 };
 const Icon = ({ n, s = 20 }) => html`<svg class="ico" width=${s} height=${s} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d=${ICONS[n]} /></svg>`;
 
@@ -150,6 +152,14 @@ function Hoy() {
       <div class="kpi"><div class="k-l">Esta semana</div><div class="k-v">${(minSemana / 60).toFixed(1).replace('.', ',')}<small> h</small></div><div class="k-s">${objH ? `de ${s.settings.horasObjetivoSemana} h objetivo` : 'estudiadas'}</div></div>
     </div>
 
+    ${!s.settings.examDate || !objetivo ? html`<section class="card onboard">
+      <h2>Primeros pasos</h2>
+      <ol>
+        <li class=${s.settings.examDate ? 'ok' : ''}><a href="#/ajustes">Pon la fecha de tu examen</a></li>
+        <li class=${objetivo ? 'ok' : ''}><a href="#/ajustes">Elige cuándo quieres terminar la 1ª vuelta</a></li>
+        <li><a href="#/plan">Pulsa Autoplanificar</a> y tendrás tu semana organizada</li>
+        <li>Cada día, registra lo que estudias desde aquí o desde cada tema</li>
+      </ol></section>` : null}
     <section class="card">
       <h2>¿Qué toca hoy?</h2>
       <div class="choice">
@@ -612,7 +622,7 @@ function Ajustes() {
   };
   return html`<div class="page">
     <header class="ph"><div><div class="muted cap">Configuración</div><h1>Ajustes</h1></div></header>
-    <section class="card"><h2>Sincronización</h2><${CloudBox} /></section>
+    <${CuentaCard} />
     <section class="card"><h2>Oposición</h2>
       <div class="form">
         <label>Fecha del examen<input type="date" value=${st.examDate} onInput=${(e) => set('examDate', e.target.value)} /></label>
@@ -649,14 +659,242 @@ function Ajustes() {
   </div>`;
 }
 
-function CloudBox() {
+// ---------- CUENTA, PRUEBA Y PAGO ----------
+const DIA_MS = 86400000;
+function restante(ms) {
+  if (ms <= 0) return 'nada';
+  const d = Math.floor(ms / DIA_MS), h = Math.floor((ms % DIA_MS) / 3600000);
+  if (d >= 1) return `${d} día${d > 1 ? 's' : ''}${h ? ` y ${h} h` : ''}`;
+  const m = Math.floor((ms % 3600000) / 60000);
+  return h ? `${h} h ${m} min` : `${m} min`;
+}
+const fechaHora = (ms) => new Date(ms).toLocaleString('es-ES', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+
+function BotonPago({ cls = 'btn primary', texto }) {
+  const url = urlPago();
+  if (!url) return html`<p class="note warn small">El enlace de pago aún no está configurado. ${CONFIG.emailSoporte ? html`Escribe a <a href=${'mailto:' + CONFIG.emailSoporte}>${CONFIG.emailSoporte}</a>.` : ''}</p>`;
+  return html`<a class=${cls} href=${url} target="_blank" rel="noopener">${texto || `Comprar acceso de por vida · ${CONFIG.precio}`}</a>`;
+}
+
+function TrialBanner() {
   useStore();
-  if (!cloud.enabled) return html`<div class="note"><b>Modo local.</b> Tus datos se guardan solo en este navegador. Para sincronizar PC y móvil, sigue la guía del archivo <code>LEEME.md</code> (configurar Firebase, 15 min).</div>`;
-  if (!cloud.user) return html`<div><p class="muted small">Inicia sesión con Google para guardar tus datos en la nube y verlos en todos tus dispositivos.</p>
-    <button class="btn primary" onClick=${login}>Iniciar sesión con Google</button>${cloud.error ? html`<p class="error small">${cloud.error}</p>` : null}</div>`;
-  return html`<div class="acct">${cloud.user.photo ? html`<img src=${cloud.user.photo} alt="" referrerpolicy="no-referrer" />` : null}
-    <div><b>${cloud.user.name}</b><div class="muted small">${cloud.user.email} · ${cloud.status}</div></div>
-    <button class="btn sm ghost" onClick=${logout}>Cerrar sesión</button></div>${cloud.error ? html`<p class="error small">${cloud.error}</p>` : null}`;
+  if (acceso.estado !== 'prueba') return null;
+  const ms = acceso.finPrueba - Date.now();
+  return html`<div class="trial"><span><b>Prueba gratuita:</b> te quedan ${restante(ms)}.</span>
+    <a class="link" href="#/cuenta">Conseguir acceso de por vida (${CONFIG.precio}) →</a></div>`;
+}
+
+function Splash() {
+  useStore();
+  if (cloud.user && cloud.error) return html`<div class="splash"><img src="icon.svg" alt="" width="56" height="56" />
+    <p><b>No se pudo comprobar tu cuenta.</b></p><p class="muted small">${cloud.error}</p>
+    <div class="btns"><button class="btn primary" onClick=${reComprobar}>Reintentar</button><button class="btn ghost" onClick=${logout}>Cerrar sesión</button></div></div>`;
+  return html`<div class="splash"><img src="icon.svg" alt="" width="56" height="56" /><p class="muted">Cargando…</p></div>`;
+}
+
+function GoogleBtn({ texto = 'Empezar prueba gratis con Google', big }) {
+  return html`<button class=${'btn primary ' + (big ? 'big' : '')} onClick=${login}>
+    <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-7.9l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C36.9 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>
+    ${texto}</button>`;
+}
+
+const FEATURES = [
+  ['temario', 'Los 45 temas, ordenados', 'Ciencias Jurídicas, Sociales y Técnico-científicas. Clasifica cada tema: No lo sé, Flojo, Bien o Dominado.'],
+  ['check', 'Vueltas bajo control', 'Contador de vueltas por tema y fecha objetivo para cerrar cada vuelta. Tú decides cuándo vuelves a cada tema.'],
+  ['clock', 'Por dónde te quedaste', 'Registra cada sesión con minutos y una nota. Al volver, sabes exactamente dónde retomar.'],
+  ['plan', 'Plan automático', 'Reparte los temas que faltan hasta tu fecha objetivo, día a día, y añade tus clases y simulacros.'],
+  ['fisicas', 'Pruebas físicas', 'Agilidad, dominadas o suspensión y 1000 m: evolución de tus marcas y nota orientativa.'],
+  ['cloud', 'PC y móvil', 'Sincronizado en todos tus dispositivos, instalable como app y funciona sin conexión.'],
+];
+const FAQ = [
+  ['¿Necesito tarjeta para la prueba?', `No. Entras con tu cuenta de Google y tienes ${CONFIG.diasPrueba} días con todo desbloqueado.`],
+  ['¿Qué pasa cuando acaba la prueba?', `Si te convence, haces un único pago de ${CONFIG.precio} y sigues donde lo dejaste: tus datos se conservan.`],
+  ['¿De por vida significa sin suscripción?', 'Sí: pagas una vez y tienes acceso mientras el servicio exista, con todas las mejoras que se vayan añadiendo.'],
+  ['¿Incluye temario o test?', 'No. Es un planificador: organiza tu estudio con los apuntes y test de tu academia o los tuyos propios.'],
+  ['¿Es una herramienta oficial?', 'No. Es una herramienta independiente, sin relación con la Dirección General de la Policía ni con el Ministerio del Interior.'],
+];
+
+function Landing() {
+  return html`<div class="landing">
+    <header class="l-top"><div class="brand"><img src="icon.svg" alt="" width="30" height="30" /><div><b>${CONFIG.nombre}</b><span class="muted small">${CONFIG.subtitulo}</span></div></div>
+      <button class="btn ghost" onClick=${login}>Entrar</button></header>
+    <section class="hero">
+      <div class="hero-txt">
+        <span class="pill">Prueba gratis ${CONFIG.diasPrueba} días · sin tarjeta</span>
+        <h1>${CONFIG.eslogan}</h1>
+        <p class="lead">Vueltas, repasos, horas de estudio, plan semanal y pruebas físicas en un solo sitio. Pensado para la Escala Básica.</p>
+        <div class="cta"><${GoogleBtn} big /></div>
+        <p class="muted small">Después, pago único de <b>${CONFIG.precio}</b> para siempre. Sin suscripciones.</p>
+        ${cloud.error ? html`<p class="error small">${cloud.error}</p>` : null}
+      </div>
+      <div class="hero-img"><img src="captura.png" alt="Pantalla principal de la aplicación con el plan del día" width="1200" height="820" /></div>
+    </section>
+    <section class="feats">${FEATURES.map(([ic, t, d]) => html`<div class="feat"><span class="f-ico"><${Icon} n=${ic} /></span><h3>${t}</h3><p>${d}</p></div>`)}</section>
+    <section class="price-wrap"><div class="price">
+      <div class="k-l">Acceso de por vida</div>
+      <div class="p-num">${CONFIG.precio}</div><div class="muted">pago único</div>
+      <ul>${['Todas las funciones, sin límites', 'Sincronización entre PC y móvil', 'Todas las actualizaciones futuras', `${CONFIG.diasPrueba} días de prueba gratis antes de pagar`].map((x) => html`<li><${Icon} n="check" s=${16} /> ${x}</li>`)}</ul>
+      <${GoogleBtn} texto="Probar gratis" />
+    </div></section>
+    <section class="faq"><h2>Preguntas frecuentes</h2>${FAQ.map(([q, a]) => html`<details><summary>${q}</summary><p>${a}</p></details>`)}</section>
+    <${Footer} />
+  </div>`;
+}
+
+function Footer() {
+  return html`<footer class="l-foot">
+    <div><a href="#/legal/aviso">Aviso legal</a> · <a href="#/legal/privacidad">Privacidad</a> · <a href="#/legal/terminos">Términos y condiciones</a>${CONFIG.emailSoporte ? html` · <a href=${'mailto:' + CONFIG.emailSoporte}>Contacto</a>` : null}</div>
+    <p class="muted small">${CONFIG.nombre} es una herramienta independiente y no está vinculada a la Policía Nacional ni al Ministerio del Interior.</p>
+  </footer>`;
+}
+
+function Paywall() {
+  useStore();
+  const [msg, setMsg] = useState('');
+  const comprobar = async () => { setMsg('Comprobando…'); await reComprobar(); setMsg(acceso.estado === 'caducada' ? 'Todavía no consta el pago. Si acabas de pagar, la activación puede tardar un poco.' : ''); };
+  return html`<div class="landing pay">
+    <header class="l-top"><div class="brand"><img src="icon.svg" alt="" width="30" height="30" /><div><b>${CONFIG.nombre}</b></div></div>
+      <button class="btn ghost" onClick=${logout}>Cerrar sesión</button></header>
+    <section class="price-wrap"><div class="price">
+      <h1>Tu prueba gratuita ha terminado</h1>
+      <p class="muted">Tus datos están guardados. Consigue el acceso de por vida para seguir donde lo dejaste.</p>
+      <div class="p-num">${CONFIG.precio}</div><div class="muted">pago único · sin suscripción</div>
+      <${BotonPago} cls="btn primary big" />
+      <ol class="steps">
+        <li>Paga con el email <b>${cloud.user?.email}</b> (ya va rellenado).</li>
+        <li>Activamos tu acceso, ${CONFIG.tiempoActivacion}. La app se desbloquea sola.</li>
+        <li>Sigues exactamente donde lo dejaste.</li>
+      </ol>
+      <button class="btn" onClick=${comprobar}>Ya he pagado: comprobar</button>
+      ${msg ? html`<p class="muted small">${msg}</p>` : null}
+      ${CONFIG.emailSoporte ? html`<p class="muted small">¿Has pagado con otro email o tienes algún problema? Escribe a <a href=${'mailto:' + CONFIG.emailSoporte}>${CONFIG.emailSoporte}</a>.</p>` : null}
+    </div></section>
+    <${Footer} />
+  </div>`;
+}
+
+function CuentaCard() {
+  useStore();
+  const [borrando, setBorrando] = useState(false);
+  const u = cloud.user;
+  if (!cloud.enabled) return html`<section class="card"><h2>Cuenta</h2><div class="note"><b>Modo local.</b> Falta configurar Firebase (ver LEEME.md).</div></section>`;
+  if (!u) return null;
+  const est = {
+    prueba: html`<span class="badge prueba">Prueba gratuita</span> <span class="muted small">termina el ${fechaHora(acceso.finPrueba)} (quedan ${restante(acceso.finPrueba - Date.now())})</span>`,
+    pago: html`<span class="badge pago">Acceso de por vida</span>`,
+    admin: html`<span class="badge admin">Administrador</span>`,
+  }[acceso.estado];
+  const borrar = async () => {
+    if (!confirm('Se borrarán todos tus datos de estudio de la nube y de este dispositivo. ¿Continuar?') || !confirm('¿Seguro? No se puede deshacer.')) return;
+    setBorrando(true);
+    try { await borrarMisDatos(); } catch (e) { alert('No se pudo borrar: ' + e.message); setBorrando(false); }
+  };
+  return html`<section class="card" id="cuenta"><h2>Tu cuenta</h2>
+    <div class="acct">${u.photo ? html`<img src=${u.photo} alt="" referrerpolicy="no-referrer" />` : null}
+      <div><b>${u.name}</b><div class="muted small">${u.email} · ${cloud.status}</div></div>
+      <button class="btn sm ghost" onClick=${logout}>Cerrar sesión</button></div>
+    <p>${est}</p>
+    ${acceso.estado === 'prueba' ? html`<div class="buy"><p>Pago único de <b>${CONFIG.precio}</b> para usarla para siempre. Tus datos se conservan.</p><${BotonPago} />
+      <p class="muted small">Tras pagar, activamos tu acceso ${CONFIG.tiempoActivacion}.</p></div>` : null}
+    ${acceso.esAdmin ? html`<p><a class="btn" href="#/admin">Abrir panel de administración</a></p>` : null}
+    ${cloud.error ? html`<p class="error small">${cloud.error}</p>` : null}
+    <details><summary class="small muted">Eliminar mi cuenta</summary>
+      <p class="small muted">Borra todos tus datos de estudio. ${CONFIG.emailSoporte ? `Para eliminar también tu registro de cuenta, escribe a ${CONFIG.emailSoporte}.` : ''}</p>
+      <button class="btn danger sm" disabled=${borrando} onClick=${borrar}>Borrar mis datos y cerrar sesión</button></details>
+  </section>`;
+}
+
+// ---------- ADMINISTRACIÓN ----------
+function Admin() {
+  useStore();
+  const [filas, setFilas] = useState(null);
+  const [err, setErr] = useState('');
+  const [q, setQ] = useState('');
+  const [nuevo, setNuevo] = useState('');
+  const [ocupado, setOcupado] = useState('');
+  const cargar = async () => { setErr(''); try { setFilas(await adminListar()); } catch (e) { setErr(e.message); } };
+  useEffect(() => { if (acceso.esAdmin) cargar(); }, []);
+  if (!acceso.esAdmin) return html`<div class="page"><p>Solo para administradores.</p></div>`;
+  const accion = async (key, fn) => { setOcupado(key); try { await fn(); await cargar(); } catch (e) { setErr(e.message); } setOcupado(''); };
+  const ahora = Date.now();
+  const estado = (f) => (f.licencia ? 'pago' : !f.inicio ? 'pendiente' : f.finPrueba > ahora ? 'prueba' : 'caducada');
+  const ETQ = { pago: 'De pago', prueba: 'En prueba', caducada: 'Prueba terminada', pendiente: 'Pagado, sin registrar' };
+  const lista = (filas || []).filter((f) => !q || f.email.includes(q.toLowerCase()) || f.nombre.toLowerCase().includes(q.toLowerCase()));
+  const n = (e) => (filas || []).filter((f) => estado(f) === e).length;
+  return html`<div class="page">
+    <header class="ph"><div><div class="muted cap">Solo tú ves esta sección</div><h1>Administración</h1></div><button class="btn" onClick=${cargar}>Actualizar</button></header>
+    <div class="kpis">
+      <div class="kpi"><div class="k-l">Registrados</div><div class="k-v">${filas ? filas.filter((f) => f.inicio).length : '…'}</div></div>
+      <div class="kpi"><div class="k-l">En prueba</div><div class="k-v">${filas ? n('prueba') : '…'}</div></div>
+      <div class="kpi"><div class="k-l">Prueba terminada</div><div class="k-v">${filas ? n('caducada') : '…'}</div><div class="k-s">posibles compradores</div></div>
+      <div class="kpi"><div class="k-l">De pago</div><div class="k-v">${filas ? n('pago') + n('pendiente') : '…'}</div></div>
+    </div>
+    <section class="card"><h2>Activar acceso de por vida</h2>
+      <p class="muted small">Cuando te llegue un pago, pega aquí el email del comprador. Si ya está registrado, se le desbloquea al momento; si no, en cuanto entre con ese email.</p>
+      <form class="inline" onSubmit=${(e) => { e.preventDefault(); accion('nuevo', async () => { await adminActivar(nuevo, 'manual'); setNuevo(''); }); }}>
+        <input type="email" placeholder="email@ejemplo.com" value=${nuevo} onInput=${(e) => setNuevo(e.target.value)} required />
+        <button class="btn primary" type="submit" disabled=${ocupado === 'nuevo'}>Activar</button></form>
+    </section>
+    ${err ? html`<div class="note warn">${err}</div>` : null}
+    <section class="card flush">
+      <div class="pad card-h"><h2>Usuarios</h2><input class="search" placeholder="Buscar email o nombre" value=${q} onInput=${(e) => setQ(e.target.value)} /></div>
+      ${!filas ? html`<p class="pad muted">Cargando…</p>` : !lista.length ? html`<p class="pad empty">Nadie todavía.</p>` : html`<div class="ulist">${lista.map((f) => { const e = estado(f); return html`<div class="urow">
+        <div class="u-main"><b>${f.email}</b><span class="muted small">${f.nombre}${f.inicio ? ` · alta ${fechaHora(f.inicio)}` : ''}</span></div>
+        <div class="u-est"><span class=${'badge ' + e}>${ETQ[e]}</span>${e === 'prueba' ? html`<span class="muted small">quedan ${restante(f.finPrueba - ahora)}</span>` : null}</div>
+        <div class="u-act">
+          ${f.licencia ? html`<button class="btn sm ghost danger" disabled=${!!ocupado} onClick=${() => confirm(`¿Quitar el acceso de por vida a ${f.email}?`) && accion(f.email, () => adminRevocar(f.email))}>Quitar acceso</button>`
+            : html`<button class="btn sm primary" disabled=${!!ocupado} onClick=${() => accion(f.email, () => adminActivar(f.email, 'panel'))}>Activar de por vida</button>`}
+          ${f.uid && !f.licencia ? html`<button class="btn sm" disabled=${!!ocupado} onClick=${() => accion(f.uid, () => adminAmpliarPrueba(f.uid, 3))}>Prueba +3 días</button>` : null}
+        </div></div>`; })}</div>`}
+    </section>
+  </div>`;
+}
+
+// ---------- TEXTOS LEGALES ----------
+const dato = (v, etiqueta) => (v ? v : html`<mark>[COMPLETA ${etiqueta} EN app-config.js]</mark>`);
+function Legal({ doc }) {
+  const C = CONFIG;
+  const T = dato(C.titular, 'titular'), NIF = dato(C.nif, 'nif'), DOM = dato(C.domicilio, 'domicilio'), EM = dato(C.emailSoporte, 'emailSoporte'), WEB = C.web || location.origin;
+  const docs = {
+    aviso: ['Aviso legal', html`
+      <p>En cumplimiento del artículo 10 de la Ley 34/2002, de Servicios de la Sociedad de la Información y de Comercio Electrónico (LSSI-CE), se informa de los datos del titular de este sitio web:</p>
+      <ul><li><b>Titular:</b> ${T}</li><li><b>NIF:</b> ${NIF}</li><li><b>Domicilio:</b> ${DOM}</li><li><b>Email de contacto:</b> ${EM}</li><li><b>Sitio web:</b> ${WEB}</li></ul>
+      <h3>Objeto</h3><p>${C.nombre} es una aplicación web de planificación del estudio para personas que preparan la oposición a la Escala Básica de la Policía Nacional. Es una herramienta independiente: no está vinculada, patrocinada ni autorizada por la Dirección General de la Policía ni por el Ministerio del Interior. No incluye temario oficial ni garantiza resultados en el proceso selectivo.</p>
+      <h3>Propiedad intelectual</h3><p>El diseño, el código y los textos de la aplicación pertenecen a su titular. Los títulos del programa oficial se citan con fines informativos; el contenido normativo pertenece a sus autores y organismos.</p>
+      <h3>Responsabilidad</h3><p>La información que muestra la aplicación (como las puntuaciones estimadas de las pruebas físicas) es orientativa. Consulta siempre las bases oficiales de la convocatoria publicadas en el BOE.</p>
+      <h3>Legislación aplicable</h3><p>Estas condiciones se rigen por la legislación española.</p>`],
+    privacidad: ['Política de privacidad', html`
+      <h3>Responsable del tratamiento</h3><p>${T} (NIF ${NIF}), ${DOM}. Contacto: ${EM}.</p>
+      <h3>Qué datos tratamos</h3><ul>
+        <li><b>Datos de tu cuenta de Google:</b> nombre, email, foto de perfil e identificador, para darte acceso.</li>
+        <li><b>Datos de uso que tú introduces:</b> tu progreso de estudio, notas, horas, planificación y marcas de pruebas físicas.</li>
+        <li><b>Datos de la cuenta:</b> fecha de alta e inicio de la prueba gratuita y si has comprado el acceso.</li>
+        <li><b>Datos de pago:</b> los trata directamente la plataforma de pago. Nosotros no vemos ni guardamos tu tarjeta; solo recibimos el email y el importe de la compra.</li></ul>
+      <h3>Para qué y con qué base legal</h3><ul>
+        <li>Prestarte el servicio, sincronizar tus datos y gestionar la prueba y la compra: ejecución del contrato (art. 6.1.b RGPD).</li>
+        <li>Conservar el registro de alta para evitar el uso abusivo de las pruebas gratuitas y atender reclamaciones: interés legítimo (art. 6.1.f RGPD).</li>
+        <li>Cumplir obligaciones contables y fiscales: obligación legal (art. 6.1.c RGPD).</li></ul>
+      <h3>Encargados y transferencias</h3><p>Usamos Google Firebase (Google Ireland Ltd.) para el inicio de sesión y el almacenamiento, y una plataforma de pago para cobrar. Algunos de estos proveedores pueden tratar datos fuera del Espacio Económico Europeo con garantías adecuadas (Marco de Privacidad de Datos UE-EE. UU. o cláusulas contractuales tipo). No vendemos ni cedemos tus datos a terceros.</p>
+      <h3>Cuánto tiempo</h3><p>Mientras mantengas tu cuenta. Puedes borrar tus datos de estudio cuando quieras desde Ajustes → Tu cuenta. Los datos de facturación se conservan el plazo que exige la ley.</p>
+      <h3>Tus derechos</h3><p>Puedes ejercer tus derechos de acceso, rectificación, supresión, oposición, limitación y portabilidad escribiendo a ${EM}. También puedes descargar una copia de tus datos desde Ajustes. Si no estás conforme, puedes reclamar ante la Agencia Española de Protección de Datos (www.aepd.es).</p>
+      <h3>Cookies y almacenamiento local</h3><p>La aplicación solo usa almacenamiento técnico del navegador, necesario para mantener tu sesión y funcionar sin conexión. No usamos cookies publicitarias ni de analítica.</p>`],
+    terminos: ['Términos y condiciones', html`
+      <h3>1. Servicio</h3><p>${C.nombre} es una aplicación web de planificación del estudio de la oposición a la Escala Básica de la Policía Nacional, ofrecida por ${T} (NIF ${NIF}). No incluye temario ni preguntas de examen.</p>
+      <h3>2. Prueba gratuita</h3><p>Al registrarte con tu cuenta de Google dispones de ${C.diasPrueba} días de prueba con todas las funciones, sin necesidad de pago ni de tarjeta. Al terminar, puedes adquirir el acceso de por vida para seguir usándola. Tus datos se conservan aunque no compres. La prueba es una por persona.</p>
+      <h3>3. Precio y pago</h3><p>El acceso de por vida tiene un precio único de ${C.precio} (impuestos incluidos), sin suscripción ni renovaciones. El pago se realiza a través de una plataforma de pago externa, que emite el justificante de compra.</p>
+      <h3>4. Qué significa "de por vida"</h3><p>Acceso a la aplicación y a sus actualizaciones mientras el servicio se mantenga activo. Si el servicio dejara de prestarse, se avisará con antelación razonable y podrás descargar todos tus datos.</p>
+      <h3>5. Activación</h3><p>Tras el pago, el acceso se activa en la cuenta asociada al email de compra, ${C.tiempoActivacion}. Si pagaste con otro email, escríbenos a ${EM}.</p>
+      <h3>6. Derecho de desistimiento</h3><p>Al tratarse de contenido digital que se presta de forma inmediata, al comprar das tu consentimiento expreso para que el acceso empiece en ese momento y reconoces que pierdes el derecho de desistimiento de 14 días (art. 103.m del Real Decreto Legislativo 1/2007). Para eso existe la prueba gratuita. Si hay un problema técnico que te impida usarla, escríbenos y lo resolveremos o te devolveremos el dinero.</p>
+      <h3>7. Uso correcto</h3><p>La cuenta es personal e intransferible. No está permitido compartirla, revenderla ni intentar saltarse las limitaciones de la prueba.</p>
+      <h3>8. Responsabilidad</h3><p>La aplicación es una ayuda para organizarte; no garantiza ningún resultado en el proceso selectivo. Las puntuaciones de pruebas físicas son estimaciones: consulta siempre las bases oficiales. Recomendamos descargar periódicamente una copia de tus datos.</p>
+      <h3>9. Contacto y legislación</h3><p>Para cualquier duda o reclamación: ${EM}. Se aplica la legislación española. Como consumidor, también puedes acudir a la plataforma europea de resolución de litigios en línea.</p>`],
+  };
+  const [titulo, cuerpo] = docs[doc] || docs.aviso;
+  return html`<div class="landing legal">
+    <header class="l-top"><a class="brand" href="#/"><img src="icon.svg" alt="" width="30" height="30" /><div><b>${C.nombre}</b></div></a><a class="btn ghost" href="#/">Volver</a></header>
+    <article class="legal-body"><h1>${titulo}</h1><p class="muted small">Última actualización: ${C.fechaLegal}</p>${cuerpo}</article>
+    <${Footer} />
+  </div>`;
 }
 
 // ---------- APP ----------
@@ -677,19 +915,25 @@ function App() {
     if (th === 'auto') delete document.documentElement.dataset.theme; else document.documentElement.dataset.theme = th;
   }, [s.settings.theme]);
   useEffect(() => { window.scrollTo(0, 0); }, [hash]);
-  const parts = hash.replace(/^#\//, '').split('/');
+  useEffect(() => { document.title = CONFIG.nombre; }, []);
+  const parts = hash.replace(/^#\/?/, '').split('/');
   const route = parts[0] || 'hoy';
+  if (route === 'legal') return html`<${Legal} doc=${parts[1]} />`;
+  if (acceso.estado === 'cargando') return html`<${Splash} />`;
+  if (acceso.estado === 'sin-sesion') return html`<${Landing} />`;
+  if (acceso.estado === 'caducada') return html`<${Paywall} />`;
   let Page;
   if (route === 'tema') Page = html`<${TemaDetalle} id=${parseInt(parts[1], 10)} />`;
-  else Page = { hoy: html`<${Hoy} />`, temario: html`<${Temario} />`, plan: html`<${Plan} />`, fisicas: html`<${Fisicas} />`, stats: html`<${Progreso} />`, ajustes: html`<${Ajustes} />` }[route] || html`<${Hoy} />`;
-  const active = route === 'tema' ? 'temario' : route;
+  else Page = { hoy: html`<${Hoy} />`, temario: html`<${Temario} />`, plan: html`<${Plan} />`, fisicas: html`<${Fisicas} />`, stats: html`<${Progreso} />`, ajustes: html`<${Ajustes} />`, cuenta: html`<${Ajustes} />`, admin: html`<${Admin} />` }[route] || html`<${Hoy} />`;
+  const active = route === 'tema' ? 'temario' : route === 'cuenta' ? 'ajustes' : route;
   return html`<div class="shell">
     <nav class="side" aria-label="Secciones">
-      <div class="brand"><img src="icon.svg" alt="" width="28" height="28" /><div><b>Oposición PN</b><span class="muted small">Escala Básica</span></div></div>
+      <div class="brand"><img src="icon.svg" alt="" width="28" height="28" /><div><b>${CONFIG.nombre}</b><span class="muted small">${CONFIG.subtitulo}</span></div></div>
       ${NAV.map(([k, l]) => html`<a class=${'nav ' + (active === k ? 'on' : '')} href=${'#/' + k} aria-current=${active === k ? 'page' : null}><${Icon} n=${k} /><span>${l}</span></a>`)}
-      <div class="side-f"><${SyncDot} /></div>
+      ${acceso.esAdmin ? html`<a class=${'nav desk ' + (active === 'admin' ? 'on' : '')} href="#/admin"><${Icon} n="admin" /><span>Admin</span></a>` : null}
+      <div class="side-f"><${SyncDot} /><div class="legal-links"><a href="#/legal/terminos">Términos</a> · <a href="#/legal/privacidad">Privacidad</a></div></div>
     </nav>
-    <main>${Page}</main>
+    <main><${TrialBanner} />${Page}</main>
     ${modal ? html`<${RegistroModal} ...${modal} onClose=${() => setModal(null)} />` : null}
   </div>`;
 }

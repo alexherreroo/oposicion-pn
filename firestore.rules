@@ -1,0 +1,53 @@
+rules_version = '2';
+// Reglas de seguridad de Firestore. Pégalas en Firebase → Firestore Database → Reglas → Publicar.
+// Antes de publicar, cambia TU_EMAIL_DE_ADMIN@gmail.com por el email con el que entras tú.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+    function myEmail() { return request.auth.token.email; }
+    function isAdmin() {
+      return signedIn() && request.auth.token.email_verified == true
+        && myEmail() == 'TU_EMAIL_DE_ADMIN@gmail.com';
+    }
+    function hasLicense() {
+      return signedIn() && exists(/databases/$(database)/documents/licencias/$(myEmail()));
+    }
+    // Días de prueba: debe coincidir con diasPrueba de app-config.js.
+    function inTrial() {
+      let path = /databases/$(database)/documents/accounts/$(request.auth.uid);
+      return signedIn() && exists(path)
+        && request.time < get(path).data.trialStart + duration.value(3, 'd');
+    }
+
+    // Una cuenta por usuario. La fecha de inicio de la prueba la pone el servidor
+    // (no se puede falsear) y solo el administrador puede cambiarla o borrarla.
+    match /accounts/{uid} {
+      allow read: if signedIn() && (request.auth.uid == uid || isAdmin());
+      allow create: if signedIn() && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['email', 'nombre', 'trialStart'])
+        && request.resource.data.email == myEmail()
+        && request.resource.data.trialStart == request.time;
+      allow update, delete: if isAdmin();
+    }
+
+    // Licencias de por vida, una por email. Solo el administrador las crea o quita.
+    match /licencias/{email} {
+      allow read: if signedIn() && (myEmail() == email || isAdmin());
+      allow write: if isAdmin();
+    }
+
+    // Datos de estudio de cada usuario: solo él, y solo con prueba activa o licencia.
+    // Borrar sus propios datos se permite siempre (derecho de supresión, RGPD).
+    match /users/{uid} {
+      allow read, create, update: if signedIn() && request.auth.uid == uid
+        && (hasLicense() || inTrial() || isAdmin());
+      allow delete: if signedIn() && request.auth.uid == uid;
+    }
+
+    // Documento ficticio para que la app sepa si eres administrador.
+    match /admin/{doc} {
+      allow read: if isAdmin();
+    }
+  }
+}

@@ -1,5 +1,7 @@
 # Oposición PN · Planificador
 
+> 💶 **¿Quieres venderla?** Lee **[VENDER.md](VENDER.md)**: prueba gratis de 3 días, pago único y panel de administración.
+
 Tu web personal para planificar la oposición a Policía Nacional (Escala Básica): vueltas al temario, repasos espaciados, arrastre, plan diario/semanal/mensual, horas de estudio y pruebas físicas.
 
 Funciona **sin instalar nada**, es **gratis** y tus datos son solo tuyos.
@@ -36,18 +38,7 @@ Ya puedes usarla. De momento está en **modo local**: los datos se guardan solo 
 3. Menú izquierdo → **Compilación → Authentication → Comenzar** → pestaña *Sign-in method* → **Google** → Habilitar → elige tu correo de asistencia → **Guardar**.
 4. En Authentication → **Configuración → Dominios autorizados → Agregar dominio** → escribe `TU-USUARIO.github.io`.
 5. Menú izquierdo → **Compilación → Firestore Database → Crear base de datos** → ubicación `europe-southwest1 (Madrid)` → **Iniciar en modo de producción** → Crear.
-6. En Firestore → pestaña **Reglas**, borra lo que haya, pega esto y pulsa **Publicar**:
-   ```
-   rules_version = '2';
-   service cloud.firestore {
-     match /databases/{database}/documents {
-       match /users/{uid} {
-         allow read, write: if request.auth != null && request.auth.uid == uid;
-       }
-     }
-   }
-   ```
-   (Así solo tú, con tu cuenta, puedes leer y escribir tus datos.)
+6. En Firestore → pestaña **Reglas**, pega el contenido del archivo **`firestore.rules`** (cambiando `TU_EMAIL_DE_ADMIN@gmail.com` por tu email) y pulsa **Publicar**. Así cada persona solo puede ver sus datos, y solo con la prueba activa o habiendo pagado.
 7. En GitHub, abre el archivo **`firebase-config.js`** → icono del lápiz ✏️ → rellena los valores entre comillas con los del paso 2 → **Commit changes**.
 8. Abre la web, ve a **Ajustes → Iniciar sesión con Google**. Haz lo mismo en el móvil. ¡Listo, todo sincronizado!
 
