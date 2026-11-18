@@ -11,18 +11,22 @@ export default {
   eslogan: 'Planifica tu oposición a Policía Nacional y da vueltas al temario sin perder el hilo.',
 
   // --- Venta ---
-  precio: '29 €', // texto que se muestra (el cobro real lo fija tu plataforma de pago)
+  precio: '19,99 €', // texto que se muestra (el cobro real lo fija el producto en Shopify)
   // Días de prueba gratis. ⚠️ Si lo cambias, cambia también el número en firestore.rules
   // (duration.value(3, 'd')) o la app y la base de datos no coincidirán.
   diasPrueba: 3,
-  // Enlace de pago de tu plataforma (Stripe Payment Link, Lemon Squeezy, Gumroad…).
+  // Enlace de compra. Ahora apunta al producto "Planificador Policía Nacional · Acceso de por vida"
+  // de tu tienda Shopify (variante 61721546948942). También sirve cualquier otra plataforma de pago.
   // Puedes usar {email} y {uid}: se sustituyen por los del usuario para que el pago
   // llegue con su email ya rellenado. Ejemplos:
   //   Stripe:        'https://buy.stripe.com/XXXX?prefilled_email={email}&client_reference_id={uid}'
   //   Lemon Squeezy: 'https://TU-TIENDA.lemonsqueezy.com/buy/XXXX?checkout[email]={email}&checkout[custom][uid]={uid}'
-  urlPago: '',
+  urlPago: 'https://www.opomapas.com/cart/61721546948942:1?checkout[email]={email}&attributes[app_email]={email}&attributes[app_uid]={uid}',
   // Cuánto tardas en activar el acceso tras el pago (se muestra al comprador).
-  tiempoActivacion: 'normalmente en menos de 12 horas',
+  tiempoActivacion: 'automáticamente en unos segundos',
+  // Tu tienda (aparece en la pantalla de pago y al pie de la portada).
+  tienda: 'OpoMapas',
+  urlTienda: 'https://www.opomapas.com',
 
   // --- Contacto y datos legales (obligatorios para vender en España) ---
   emailSoporte: '',

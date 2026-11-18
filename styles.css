@@ -404,3 +404,4 @@ mark { background: var(--amarillo-soft); color: var(--amarillo); font-weight: 70
 .u-act { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
 @media (max-width: 700px) { .urow { grid-template-columns: 1fr; } .u-act { justify-content: flex-start; } .search { max-width: none; } }
 .l-top .brand { display: flex; }
+.price .btn.big + .muted { margin-top: 6px; }

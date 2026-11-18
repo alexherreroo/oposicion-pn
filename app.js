@@ -673,7 +673,7 @@ const fechaHora = (ms) => new Date(ms).toLocaleString('es-ES', { day: 'numeric',
 function BotonPago({ cls = 'btn primary', texto }) {
   const url = urlPago();
   if (!url) return html`<p class="note warn small">El enlace de pago aún no está configurado. ${CONFIG.emailSoporte ? html`Escribe a <a href=${'mailto:' + CONFIG.emailSoporte}>${CONFIG.emailSoporte}</a>.` : ''}</p>`;
-  return html`<a class=${cls} href=${url} target="_blank" rel="noopener">${texto || `Comprar acceso de por vida · ${CONFIG.precio}`}</a>`;
+  return html`<a class=${cls} href=${url} target="_blank" rel="noopener">${texto || `Comprar acceso de por vida · ${CONFIG.precio}`}</a>${CONFIG.tienda ? html`<span class="muted small">Pago seguro en la tienda ${CONFIG.tienda}</span>` : null}`;
 }
 
 function TrialBanner() {
@@ -743,7 +743,7 @@ function Landing() {
 
 function Footer() {
   return html`<footer class="l-foot">
-    <div><a href="#/legal/aviso">Aviso legal</a> · <a href="#/legal/privacidad">Privacidad</a> · <a href="#/legal/terminos">Términos y condiciones</a>${CONFIG.emailSoporte ? html` · <a href=${'mailto:' + CONFIG.emailSoporte}>Contacto</a>` : null}</div>
+    <div><a href="#/legal/aviso">Aviso legal</a> · <a href="#/legal/privacidad">Privacidad</a> · <a href="#/legal/terminos">Términos y condiciones</a>${CONFIG.emailSoporte ? html` · <a href=${'mailto:' + CONFIG.emailSoporte}>Contacto</a>` : null}${CONFIG.urlTienda ? html` · <a href=${CONFIG.urlTienda} target="_blank" rel="noopener">Tienda ${CONFIG.tienda || ''}</a>` : null}</div>
     <p class="muted small">${CONFIG.nombre} es una herramienta independiente y no está vinculada a la Policía Nacional ni al Ministerio del Interior.</p>
   </footer>`;
 }
@@ -761,8 +761,8 @@ function Paywall() {
       <div class="p-num">${CONFIG.precio}</div><div class="muted">pago único · sin suscripción</div>
       <${BotonPago} cls="btn primary big" />
       <ol class="steps">
-        <li>Paga con el email <b>${cloud.user?.email}</b> (ya va rellenado).</li>
-        <li>Activamos tu acceso, ${CONFIG.tiempoActivacion}. La app se desbloquea sola.</li>
+        <li>Completa la compra${CONFIG.tienda ? ` en ${CONFIG.tienda}` : ''}. Tu cuenta <b>${cloud.user?.email}</b> va vinculada al pedido.</li>
+        <li>Tu acceso se activa ${CONFIG.tiempoActivacion}: vuelve a esta pestaña y la app se desbloquea sola.</li>
         <li>Sigues exactamente donde lo dejaste.</li>
       </ol>
       <button class="btn" onClick=${comprobar}>Ya he pagado: comprobar</button>
@@ -795,7 +795,7 @@ function CuentaCard() {
       <button class="btn sm ghost" onClick=${logout}>Cerrar sesión</button></div>
     <p>${est}</p>
     ${acceso.estado === 'prueba' ? html`<div class="buy"><p>Pago único de <b>${CONFIG.precio}</b> para usarla para siempre. Tus datos se conservan.</p><${BotonPago} />
-      <p class="muted small">Tras pagar, activamos tu acceso ${CONFIG.tiempoActivacion}.</p></div>` : null}
+      <p class="muted small">Tras pagar, tu acceso se activa ${CONFIG.tiempoActivacion}.</p></div>` : null}
     ${acceso.esAdmin ? html`<p><a class="btn" href="#/admin">Abrir panel de administración</a></p>` : null}
     ${cloud.error ? html`<p class="error small">${cloud.error}</p>` : null}
     <details><summary class="small muted">Eliminar mi cuenta</summary>
@@ -830,7 +830,7 @@ function Admin() {
       <div class="kpi"><div class="k-l">De pago</div><div class="k-v">${filas ? n('pago') + n('pendiente') : '…'}</div></div>
     </div>
     <section class="card"><h2>Activar acceso de por vida</h2>
-      <p class="muted small">Cuando te llegue un pago, pega aquí el email del comprador. Si ya está registrado, se le desbloquea al momento; si no, en cuanto entre con ese email.</p>
+      <p class="muted small">Las compras en Shopify se activan solas. Usa esto solo para casos especiales (regalos, pagos por otro medio o compras con otro email): pega el email. Si ya está registrado, se le desbloquea al momento; si no, en cuanto entre con ese email.</p>
       <form class="inline" onSubmit=${(e) => { e.preventDefault(); accion('nuevo', async () => { await adminActivar(nuevo, 'manual'); setNuevo(''); }); }}>
         <input type="email" placeholder="email@ejemplo.com" value=${nuevo} onInput=${(e) => setNuevo(e.target.value)} required />
         <button class="btn primary" type="submit" disabled=${ocupado === 'nuevo'}>Activar</button></form>
@@ -839,7 +839,7 @@ function Admin() {
     <section class="card flush">
       <div class="pad card-h"><h2>Usuarios</h2><input class="search" placeholder="Buscar email o nombre" value=${q} onInput=${(e) => setQ(e.target.value)} /></div>
       ${!filas ? html`<p class="pad muted">Cargando…</p>` : !lista.length ? html`<p class="pad empty">Nadie todavía.</p>` : html`<div class="ulist">${lista.map((f) => { const e = estado(f); return html`<div class="urow">
-        <div class="u-main"><b>${f.email}</b><span class="muted small">${f.nombre}${f.inicio ? ` · alta ${fechaHora(f.inicio)}` : ''}</span></div>
+        <div class="u-main"><b>${f.email}</b><span class="muted small">${f.nombre}${f.inicio ? ` · alta ${fechaHora(f.inicio)}` : ''}${f.licencia?.pedido ? ` · pedido Shopify ${f.licencia.pedido}` : ''}</span></div>
         <div class="u-est"><span class=${'badge ' + e}>${ETQ[e]}</span>${e === 'prueba' ? html`<span class="muted small">quedan ${restante(f.finPrueba - ahora)}</span>` : null}</div>
         <div class="u-act">
           ${f.licencia ? html`<button class="btn sm ghost danger" disabled=${!!ocupado} onClick=${() => confirm(`¿Quitar el acceso de por vida a ${f.email}?`) && accion(f.email, () => adminRevocar(f.email))}>Quitar acceso</button>`
