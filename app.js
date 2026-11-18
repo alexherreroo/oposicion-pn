@@ -1,7 +1,8 @@
 import { html, render, useState, useEffect, useMemo } from './preact-htm.js';
 import * as L from './logic.js';
-import { getState, subscribe, update, replaceAll, cloud, acceso, initCloud, login, logout, defaultState, urlPago, reComprobar, borrarMisDatos, adminListar, adminActivar, adminRevocar, adminAmpliarPrueba } from './store.js';
+import { getState, subscribe, update, replaceAll, cloud, acceso, permitido, initCloud, login, logout, defaultState, urlPago, reComprobar, borrarMisDatos, adminListar, adminActivar, adminRevocar, adminAmpliarPrueba } from './store.js';
 import CONFIG from './app-config.js';
+import * as E from './engage.js';
 
 const { TEMAS, BLOQUES, today, addDays, fmtRel, fmtCorto, fmtLargo, fmtMin, } = L;
 
@@ -36,6 +37,10 @@ const ICONS = {
   cloud: 'M17.5 19H8a6 6 0 115.7-8h1.3a4.5 4.5 0 012.5 8.2z',
   fire: 'M12 22c4 0 7-3 7-7 0-4-3-6-4-10-2 2-3 4-3 6-1-1-2-2-2-4-3 3-5 5-5 8 0 4 3 7 7 7z',
   clock: 'M12 7v5l3 2M12 22a10 10 0 100-20 10 10 0 000 20z',
+  play: 'M7 5l12 7-12 7V5z',
+  pause: 'M8 5v14M16 5v14',
+  share: 'M4 12v7a1 1 0 001 1h14a1 1 0 001-1v-7M12 3v13M7 8l5-5 5 5',
+  trophy: 'M8 21h8M12 17v4M7 4h10v5a5 5 0 01-10 0V4zM17 5h3v2a3 3 0 01-3 3M7 5H4v2a3 3 0 003 3',
   admin: 'M12 3l8 3v6c0 5-3.5 8.5-8 9.5C7.5 20.5 4 17 4 12V6l8-3zM9 12l2 2 4-4',
 };
 const Icon = ({ n, s = 20 }) => html`<svg class="ico" width=${s} height=${s} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d=${ICONS[n]} /></svg>`;
@@ -62,10 +67,10 @@ function Barra({ pct }) {
 // ---------- Modal para registrar una vuelta o un repaso ----------
 let openRegistroGlobal = () => {};
 const PROX_CHIPS = [[3, '3 días'], [7, '1 semana'], [14, '2 semanas'], [30, '1 mes']];
-function RegistroModal({ temaId, tipo: tipoInicial, taskId, onClose }) {
+function RegistroModal({ temaId, tipo: tipoInicial, taskId, minInicial, onClose }) {
   const [tipo, setTipo] = useState(tipoInicial || 'estudio');
   const [rating, setRating] = useState(0);
-  const [min, setMin] = useState('');
+  const [min, setMin] = useState(minInicial ? String(minInicial) : '');
   const [date, setDate] = useState(today());
   const [note, setNote] = useState('');
   const [prox, setProx] = useState('');
@@ -86,6 +91,8 @@ function RegistroModal({ temaId, tipo: tipoInicial, taskId, onClose }) {
       if (tipo !== 'estudio') tm.proximo = prox || null;
       if (taskId) { const k = s.tasks.find((x) => x.id === taskId); if (k) k.done = true; }
     });
+    if (tipo === 'vuelta') { E.confeti(); avisar(`🎉 ¡Vuelta ${info.vueltas + 1} del tema ${temaId} completada!`); }
+    else if (m > 0) avisar(`✅ ${fmtMin(m)} de estudio guardados en el tema ${temaId}`);
     onClose();
   };
   const ayuda = {
@@ -99,6 +106,7 @@ function RegistroModal({ temaId, tipo: tipoInicial, taskId, onClose }) {
         <button class="icon-btn" onClick=${onClose} aria-label="Cerrar"><${Icon} n="x" /></button></div>
       <div class="seg three">${Object.entries(L.TIPO_REG).map(([k, l]) => html`<button class=${tipo === k ? 'on' : ''} onClick=${() => setTipo(k)}>${l}</button>`)}</div>
       <p class="muted small">${ayuda}</p>
+      ${minInicial ? html`<div class="note small">⏱️ Has estudiado <b>${fmtMin(minInicial)}</b> con el temporizador. Apunta por dónde te has quedado.</div>` : null}
       ${tipo === 'estudio' && info.nota ? html`<div class="hint small">Última nota (${fmtCorto(info.nota.date)}): <i>${info.nota.note}</i></div>` : null}
       ${tipo === 'repaso' ? html`<label class="lbl">¿Qué tal te lo sabías?</label>
         <div class="ratings">${L.RATINGS.map((r) => html`<button class=${'rating ' + (rating === r.v ? 'on' : '')} onClick=${() => setRating(r.v)}><span class="emo">${r.emoji}</span>${r.label}</button>`)}</div>` : null}
@@ -117,13 +125,195 @@ function RegistroModal({ temaId, tipo: tipoInicial, taskId, onClose }) {
     </div></div>`;
 }
 
-// ---------- HOY ----------
-function racha(s) {
-  const dias = new Set([...s.horas.map((h) => h.date), ...Object.values(s.temas).flatMap((t) => (t.regs || []).map((r) => r.date))]);
-  let d = dias.has(today()) ? today() : addDays(today(), -1), n = 0;
-  while (dias.has(d)) { n++; d = addDays(d, -1); }
-  return n;
+
+// ---------- Avisos emergentes ----------
+let avisar = () => {};
+function Toasts() {
+  const [lista, setLista] = useState([]);
+  avisar = (texto) => {
+    const id = Math.random();
+    setLista((l) => [...l, { id, texto }]);
+    setTimeout(() => setLista((l) => l.filter((x) => x.id !== id)), 5000);
+  };
+  return html`<div class="toasts" aria-live="polite">${lista.map((t) => html`<div class="toast" key=${t.id}>${t.texto}</div>`)}</div>`;
 }
+
+// Celebra los logros nuevos (comparando con los ya vistos en este dispositivo).
+function useLogros(s) {
+  useEffect(() => {
+    if (!permitido()) return;
+    const key = 'pn-logros:' + (cloud.user?.uid || 'local');
+    const ahora = E.logrosConseguidos(s);
+    let vistos = null;
+    try { vistos = JSON.parse(localStorage.getItem(key) || 'null'); } catch {}
+    try { localStorage.setItem(key, JSON.stringify(ahora)); } catch {}
+    if (!vistos) return; // primera vez en este dispositivo: no celebramos lo que ya había
+    const nuevos = E.LOGROS.filter((l) => ahora.includes(l.id) && !vistos.includes(l.id));
+    if (nuevos.length) { E.confeti(); nuevos.forEach((l) => avisar(`${l.icon} Logro desbloqueado: ${l.titulo}`)); }
+  }, [s]);
+}
+const reiniciarLogrosVistos = (s) => { try { localStorage.setItem('pn-logros:' + (cloud.user?.uid || 'local'), JSON.stringify(E.logrosConseguidos(s))); } catch {} };
+
+// ---------- Temporizador de estudio ----------
+let timerGlobal = { set: () => {} };
+function iniciarTimer(temaId, modo) {
+  const actual = E.leerTimer();
+  if (actual && actual.temaId !== temaId && !confirm(`Ya tienes el temporizador en marcha con el tema ${actual.temaId}. ¿Empezar uno nuevo con el tema ${temaId}? (se perderá el tiempo del anterior)`)) return;
+  if (modo === 'pomodoro' && 'Notification' in window && Notification.permission === 'default') { try { Notification.requestPermission(); } catch {} }
+  const t = E.nuevoTimer(temaId, modo);
+  E.guardarTimer(t); timerGlobal.set(t);
+}
+function StartTimer({ temaId, compact }) {
+  return html`<div class=${'start-timer ' + (compact ? 'compact' : '')}>
+    <button class="btn primary" onClick=${() => iniciarTimer(temaId, 'crono')}><${Icon} n="play" s=${16} /> Empezar a estudiar</button>
+    <button class="btn" onClick=${() => iniciarTimer(temaId, 'pomodoro')} title="25 min de foco y 5 de descanso">🍅 Pomodoro</button>
+  </div>`;
+}
+function Timer({ onTerminar }) {
+  const [t, setT] = useState(E.leerTimer());
+  const [, tick] = useState(0);
+  timerGlobal.set = setT;
+  useEffect(() => { document.body.classList.toggle('con-timer', !!t); }, [t]);
+  useEffect(() => {
+    if (!t) { document.title = CONFIG.nombre; return; }
+    const id = setInterval(() => {
+      const [nt, ev] = E.tickTimer(t);
+      if (ev) {
+        E.guardarTimer(nt); setT(nt);
+        if (ev === 'descanso') E.notificar('🍅 ¡Pomodoro completado!', 'Descansa 5 minutos.');
+        else E.notificar('⏰ Fin del descanso', 'Vuelve al tema: otros 25 minutos.');
+      }
+      document.title = `⏱ ${E.mmss(t.modo === 'pomodoro' && t.fase === 'descanso' ? E.DESCANSO_MS - E.msFase(t) : E.msFoco(t))} · T${t.temaId}`;
+      tick((n) => n + 1);
+    }, 1000);
+    return () => clearInterval(id);
+  }, [t]);
+  if (!t) return null;
+  const tema = temaDe(t.temaId);
+  const foco = E.msFoco(t);
+  const descanso = t.modo === 'pomodoro' && t.fase === 'descanso';
+  const mostrar = descanso ? E.DESCANSO_MS - E.msFase(t) : t.modo === 'pomodoro' ? (t.corriendo ? E.FOCO_MS - E.msFase(t) : t.faseRestante ?? E.FOCO_MS) : foco;
+  const guardar = (nt) => { E.guardarTimer(nt); setT(nt); };
+  const terminar = () => {
+    const min = Math.round(foco / 60000);
+    E.guardarTimer(null); setT(null);
+    if (min >= 1) onTerminar({ temaId: t.temaId, tipo: 'estudio', minInicial: min });
+    else avisar('Menos de un minuto: no se ha guardado nada.');
+  };
+  const descartar = () => { if (confirm('¿Descartar este tiempo sin guardarlo?')) { E.guardarTimer(null); setT(null); } };
+  return html`<div class=${'timer ' + (descanso ? 'descanso' : '') + (t.corriendo ? '' : ' pausado')} role="timer">
+    <div class="timer-info"><span class="timer-tema" title=${tema.titulo}>T${tema.id} · ${tema.titulo}</span>
+      <span class="timer-fase">${t.modo === 'pomodoro' ? (descanso ? '☕ Descanso' : `🍅 Foco ${t.pomos + 1}`) : '⏱️ Estudiando'}${t.corriendo ? '' : ' · en pausa'}${t.modo === 'pomodoro' ? ` · total ${E.mmss(foco)}` : ''}</span></div>
+    <div class="timer-t">${E.mmss(mostrar)}</div>
+    <div class="timer-b">
+      <button class="icon-btn" aria-label=${t.corriendo ? 'Pausar' : 'Seguir'} onClick=${() => guardar(t.corriendo ? E.pausarTimer(t) : E.reanudarTimer(t))}><${Icon} n=${t.corriendo ? 'pause' : 'play'} /></button>
+      <button class="btn sm primary" onClick=${terminar}>Terminar</button>
+      <button class="icon-btn sm" aria-label="Descartar" onClick=${descartar}><${Icon} n="x" s=${16} /></button>
+    </div>
+  </div>`;
+}
+
+
+// ---------- BIENVENIDA (primer uso) ----------
+const necesitaBienvenida = (s) => !s.settings.onboarded && !s.settings.examDate && !Object.values(s.temas).some((t) => (t.regs || []).length);
+function Bienvenida({ onFin }) {
+  const s = getState();
+  const hoy = today();
+  const [paso, setPaso] = useState(0);
+  const [exam, setExam] = useState('');
+  const [sinFecha, setSinFecha] = useState(false);
+  const [obj, setObj] = useState('');
+  const [hechos, setHechos] = useState([]);
+  const [dias, setDias] = useState([0, 1, 2, 3, 4, 5]);
+  const [horas, setHoras] = useState(15);
+  const [res, setRes] = useState(null);
+  const masMeses = (n) => { const d = L.parse(hoy); d.setMonth(d.getMonth() + n); return L.toStr(d); };
+  const toggle = (id) => setHechos((h) => (h.includes(id) ? h.filter((x) => x !== id) : [...h, id]));
+  const bloque = (b) => { const ids = TEMAS.filter((t) => t.bloque === b).map((t) => t.id); const todos = ids.every((id) => hechos.includes(id)); setHechos((h) => (todos ? h.filter((x) => !ids.includes(x)) : [...new Set([...h, ...ids])])); };
+  const terminar = () => {
+    update((st) => {
+      st.settings.examDate = sinFecha ? '' : exam;
+      st.settings.objetivosVuelta = obj ? [obj] : [];
+      st.settings.diasEstudio = dias.length ? [...dias].sort() : [0, 1, 2, 3, 4, 5];
+      st.settings.horasObjetivoSemana = +horas || 0;
+      st.settings.onboarded = true;
+      hechos.forEach((id) => {
+        st.temas[id] = st.temas[id] || { semaforo: null, regs: [], proximo: null };
+        st.temas[id].regs.push({ id: L.uid(), date: hoy, tipo: 'vuelta', importado: true });
+      });
+    });
+    const st = getState();
+    const fin = L.weekday(hoy) >= 5 ? addDays(hoy, 7) : addDays(L.weekStart(hoy), 6);
+    const { nuevas } = L.autoplan(st, hoy, fin);
+    update((x) => nuevas.forEach((k) => x.tasks.push({ id: L.uid(), done: false, ...k })));
+    reiniciarLogrosVistos(getState());
+    setRes({ tareas: nuevas.length, hoy: nuevas.filter((k) => k.date === hoy).length, r: E.ritmo(getState()) });
+    setPaso(4);
+    E.confeti();
+  };
+  const saltar = () => { update((st) => { st.settings.onboarded = true; }); onFin(); };
+  const pasos = ['Examen', 'Objetivo', 'Temas', 'Horario'];
+  const sugerido = exam && !sinFecha ? addDays(exam, -60) : '';
+  return html`<div class="modal-bg wiz-bg"><div class="modal wiz" role="dialog" aria-label="Bienvenida">
+    ${paso < 4 ? html`<div class="wiz-top"><div class="wiz-steps">${pasos.map((p, i) => html`<span class=${i <= paso ? 'on' : ''}>${i + 1}. ${p}</span>`)}</div><button class="link small muted" onClick=${saltar}>Saltar</button></div>` : null}
+    ${paso === 0 ? html`<div class="wiz-body">
+      <div class="wiz-emoji">👋</div><h2>¡Bienvenido/a! Vamos a organizar tu oposición en 1 minuto</h2>
+      <label class="lbl">¿Cuándo es tu examen?</label>
+      <input type="date" value=${exam} min=${hoy} disabled=${sinFecha} onInput=${(e) => setExam(e.target.value)} />
+      <label class="toggle"><input type="checkbox" checked=${sinFecha} onChange=${(e) => setSinFecha(e.target.checked)} /><span>Aún no hay fecha (podrás ponerla luego)</span></label>
+      <div class="modal-f"><button class="btn primary" disabled=${!exam && !sinFecha} onClick=${() => setPaso(1)}>Siguiente</button></div></div>` : null}
+    ${paso === 1 ? html`<div class="wiz-body">
+      <div class="wiz-emoji">🎯</div><h2>¿Cuándo quieres terminar la primera vuelta al temario?</h2>
+      <div class="quick">${[1, 2, 3, 4, 6].map((n) => { const d = masMeses(n); return html`<button class=${'chip ' + (obj === d ? 'on' : '')} onClick=${() => setObj(d)}>En ${n} ${n === 1 ? 'mes' : 'meses'}</button>`; })}</div>
+      <input type="date" value=${obj} min=${hoy} onInput=${(e) => setObj(e.target.value)} />
+      ${sugerido && sugerido > hoy ? html`<p class="muted small">Consejo: termínala unos 2 meses antes del examen (hacia el <button class="link" onClick=${() => setObj(sugerido)}><b>${fmtCorto(sugerido)}</b></button>) para tener tiempo de repasar.</p>` : null}
+      <div class="modal-f"><button class="btn ghost" onClick=${() => setPaso(0)}>Atrás</button><button class="btn primary" disabled=${!obj} onClick=${() => setPaso(2)}>Siguiente</button></div></div>` : null}
+    ${paso === 2 ? html`<div class="wiz-body">
+      <div class="wiz-emoji">📚</div><h2>¿Ya tienes algún tema estudiado?</h2>
+      <p class="muted small">Toca los temas a los que ya has dado una vuelta. Si empiezas de cero, pasa al siguiente paso.</p>
+      ${Object.entries(BLOQUES).map(([b, n]) => html`<div class="wiz-bloque"><div class="wiz-bh"><b>${n}</b><button class="link small" onClick=${() => bloque(b)}>Todos / ninguno</button></div>
+        <div class="wiz-temas">${TEMAS.filter((t) => t.bloque === b).map((t) => html`<button class=${'tnum-btn ' + (hechos.includes(t.id) ? 'on' : '')} title=${t.titulo} aria-pressed=${hechos.includes(t.id)} onClick=${() => toggle(t.id)}>${t.id}</button>`)}</div></div>`)}
+      <p class="small"><b>${hechos.length}</b> de 45 temas marcados</p>
+      <div class="modal-f"><button class="btn ghost" onClick=${() => setPaso(1)}>Atrás</button><button class="btn primary" onClick=${() => setPaso(3)}>${hechos.length ? 'Siguiente' : 'Empiezo de cero'}</button></div></div>` : null}
+    ${paso === 3 ? html`<div class="wiz-body">
+      <div class="wiz-emoji">🗓️</div><h2>¿Qué días estudias?</h2>
+      <div class="days">${L.DIAS_CORTO.map((d, i) => html`<button class=${'chip ' + (dias.includes(i) ? 'on' : '')} onClick=${() => setDias(dias.includes(i) ? dias.filter((x) => x !== i) : [...dias, i])}>${d}</button>`)}</div>
+      <label class="lbl">¿Cuántas horas a la semana quieres estudiar?</label>
+      <div class="quick">${[10, 15, 20, 25, 30].map((h) => html`<button class=${'chip ' + (+horas === h ? 'on' : '')} onClick=${() => setHoras(h)}>${h} h</button>`)}</div>
+      <div class="modal-f"><button class="btn ghost" onClick=${() => setPaso(2)}>Atrás</button><button class="btn primary" disabled=${!dias.length} onClick=${terminar}>Crear mi plan</button></div></div>` : null}
+    ${paso === 4 && res ? html`<div class="wiz-body wiz-fin">
+      <div class="wiz-emoji">🎉</div><h2>¡Tu plan está listo!</h2>
+      <ul class="wiz-res">
+        <li>📅 <b>${res.tareas} tareas</b> planificadas esta semana${res.hoy ? html`, <b>${res.hoy}</b> para hoy` : ''}.</li>
+        ${res.r.necesarioSemana != null ? html`<li>🎯 Para terminar la vuelta 1 el <b>${fmtCorto(obj)}</b> necesitas unos <b>${E.fmtNum(res.r.necesarioSemana)} temas por semana</b>.</li>` : null}
+        ${hechos.length ? html`<li>✅ Llevas <b>${hechos.length} de 45 temas</b> con la primera vuelta.</li>` : null}
+        <li>⏱️ Cuando estudies, pulsa <b>Empezar a estudiar</b> y la app contará el tiempo por ti.</li>
+      </ul>
+      <div class="modal-f"><button class="btn primary big" onClick=${onFin}>Ver mi plan de hoy →</button></div></div>` : null}
+  </div></div>`;
+}
+
+// ---------- Ritmo ----------
+function RitmoCard({ s }) {
+  const r = E.ritmo(s);
+  if (r.estado === 'sin-objetivo') return html`<section class="card ritmo"><div class="ritmo-ico">🎯</div><div><h2>Ponte un objetivo</h2><p class="muted small">Dime cuándo quieres terminar la vuelta ${r.vuelta} y te calculo el ritmo que necesitas.</p><a class="btn sm" href="#/ajustes">Poner fecha objetivo</a></div></section>`;
+  if (r.estado === 'vencido') return html`<section class="card ritmo atras"><div class="ritmo-ico">⏰</div><div><h2>Tu fecha objetivo de la vuelta ${r.vuelta} ya pasó</h2><p class="muted small">Te faltan ${r.restantes} temas. Ponte una fecha nueva y reorganiza el plan.</p><a class="btn sm" href="#/ajustes">Cambiar fecha</a></div></section>`;
+  if (r.estado === 'hecho') return null;
+  const lleva = `Llevas ${E.fmtNum(r.actualSemana)} temas por semana y necesitas ${E.fmtNum(r.necesarioSemana)}`;
+  const M = r.estado === 'arrancando' ? ['💪', 'Buen comienzo', `Llevas ${r.semanaActual} tema${r.semanaActual === 1 ? '' : 's'} esta semana. Para terminar la vuelta ${r.vuelta} el ${fmtCorto(r.objetivo)} el objetivo es unos ${E.fmtNum(r.necesarioSemana)} temas por semana: ¡a por ello!`]
+    : r.estado === 'empezando' ? ['🚀', 'Empieza hoy', `Para terminar la vuelta ${r.vuelta} el ${fmtCorto(r.objetivo)} necesitas unos ${E.fmtNum(r.necesarioSemana)} temas por semana.`]
+    : r.estado === 'bien' ? ['✅', '¡Vas bien!', `${lleva}.${r.fin ? ` A este ritmo acabas el ${fmtCorto(r.fin)}.` : ''}`]
+    : r.estado === 'justo' ? ['⚠️', 'Vas justo', `${lleva}. Un empujón y llegas.`]
+    : ['🔴', 'Necesitas acelerar', `${lleva}${r.fin ? `: a este ritmo acabarías el ${fmtCorto(r.fin)}` : ''}.`];
+  const pct = Math.round(((45 - r.restantes) / 45) * 100);
+  return html`<section class=${'card ritmo ' + r.estado}><div class="ritmo-ico">${M[0]}</div><div class="ritmo-txt">
+    <h2>${M[1]}</h2><p class="small">${M[2]}</p>
+    <div class="progress"><div style=${{ width: pct + '%' }}></div></div>
+    <p class="muted small">Vuelta ${r.vuelta}: ${45 - r.restantes}/45 temas · objetivo ${fmtCorto(r.objetivo)} (${r.dias} días)</p></div></section>`;
+}
+
+// ---------- HOY ----------
+const racha = (s) => E.racha(s);
 const minutosEntre = (s, a, b) => s.horas.filter((h) => h.date >= a && h.date <= b).reduce((x, h) => x + h.min, 0);
 const notaDesdeVuelta = (i) => (i.nota && (!i.ultimaVuelta || i.nota.date >= i.ultimaVuelta.date) ? i.nota : null);
 
@@ -152,13 +342,11 @@ function Hoy() {
       <div class="kpi"><div class="k-l">Esta semana</div><div class="k-v">${(minSemana / 60).toFixed(1).replace('.', ',')}<small> h</small></div><div class="k-s">${objH ? `de ${s.settings.horasObjetivoSemana} h objetivo` : 'estudiadas'}</div></div>
     </div>
 
-    ${!s.settings.examDate || !objetivo ? html`<section class="card onboard">
+    <${RitmoCard} s=${s} />
+    ${s.settings.onboarded && !s.settings.examDate ? html`<section class="card onboard">
       <h2>Primeros pasos</h2>
       <ol>
         <li class=${s.settings.examDate ? 'ok' : ''}><a href="#/ajustes">Pon la fecha de tu examen</a></li>
-        <li class=${objetivo ? 'ok' : ''}><a href="#/ajustes">Elige cuándo quieres terminar la 1ª vuelta</a></li>
-        <li><a href="#/plan">Pulsa Autoplanificar</a> y tendrás tu semana organizada</li>
-        <li>Cada día, registra lo que estudias desde aquí o desde cada tema</li>
       </ol></section>` : null}
     <section class="card">
       <h2>¿Qué toca hoy?</h2>
@@ -167,8 +355,9 @@ function Hoy() {
           <div class="opt-h"><span class="tag nuevo">Avanzar</span><span class="muted small">Vuelta ${v.actual}</span></div>
           ${v.siguiente ? html`<div class="opt-t"><button class="link" onClick=${() => go('#/tema/' + v.siguiente.id)}><b>Tema ${v.siguiente.id}</b> · ${v.siguiente.titulo}</button></div>
             ${nota ? html`<div class="quedaste"><span class="muted small">Te quedaste en (${fmtCorto(nota.date)}):</span> ${nota.note}</div>` : sig.n ? html`<div class="muted small">${fmtMin(sig.min)} estudiados en este tema</div>` : null}
-            <div class="btns"><button class="btn primary" onClick=${() => openRegistroGlobal({ temaId: v.siguiente.id, tipo: 'estudio' })}><${Icon} n="clock" s=${18} /> Registrar estudio</button>
-              <button class="btn" onClick=${() => openRegistroGlobal({ temaId: v.siguiente.id, tipo: 'vuelta' })}><${Icon} n="check" s=${18} /> Vuelta completa</button></div>` : html`<div class="opt-t">¡Vuelta terminada!</div>`}
+            <${StartTimer} temaId=${v.siguiente.id} compact />
+            <div class="btns"><button class="btn sm" onClick=${() => openRegistroGlobal({ temaId: v.siguiente.id, tipo: 'estudio' })}><${Icon} n="clock" s=${16} /> Registrar a mano</button>
+              <button class="btn sm" onClick=${() => openRegistroGlobal({ temaId: v.siguiente.id, tipo: 'vuelta' })}><${Icon} n="check" s=${16} /> Vuelta completa</button></div>` : html`<div class="opt-t">¡Vuelta terminada!</div>`}
         </div>
         <div class="opt">
           <div class="opt-h"><span class="tag repaso">Repasar</span><span class="muted small">${pend.length ? `${pend.length} pendiente${pend.length > 1 ? 's' : ''}` : 'Nada pendiente'}</span></div>
@@ -324,7 +513,10 @@ function TemaDetalle({ id }) {
         ${id < 45 ? html`<a class="icon-btn" href=${'#/tema/' + (id + 1)} aria-label="Tema siguiente"><${Icon} n="right" /></a>` : null}</div></header>
 
     <section class="card">
-      <h2>Registrar</h2>
+      <h2>Estudiar este tema</h2>
+      <${StartTimer} temaId=${id} />
+      <p class="muted small">El temporizador cuenta el tiempo por ti y al terminar te pide la nota de por dónde te has quedado.</p>
+      <h2 style="margin-top:14px">O registra a mano</h2>
       <div class="reg3">
         <button class="regbtn" onClick=${() => openRegistroGlobal({ temaId: id, tipo: 'estudio' })}><${Icon} n="clock" /><b>Estudio</b><span>Minutos y por dónde vas</span></button>
         <button class="regbtn" onClick=${() => openRegistroGlobal({ temaId: id, tipo: 'repaso' })}><${Icon} n="hoy" /><b>Repaso</b><span>Cómo te lo sabías</span></button>
@@ -556,6 +748,35 @@ function BarChart({ data, unit }) {
   </div>`;
 }
 
+
+function LogrosCard({ s }) {
+  const hechos = E.logrosConseguidos(s);
+  return html`<section class="card"><div class="card-h"><h2>Logros</h2><span class="muted small">${hechos.length} de ${E.LOGROS.length}</span></div>
+    <div class="logros">${E.LOGROS.map((l) => { const ok = hechos.includes(l.id); return html`<div class=${'logro ' + (ok ? 'ok' : '')} title=${l.desc}><span class="l-ico">${ok ? l.icon : '🔒'}</span><b>${l.titulo}</b><span class="muted small">${l.desc}</span></div>`; })}</div>
+  </section>`;
+}
+function CompartirCard({ s }) {
+  const [url, setUrl] = useState('');
+  const [msg, setMsg] = useState('');
+  const generar = () => {
+    const c = E.dibujarSemana(document.createElement('canvas'), s, { marca: 'Planificador Policía Nacional', web: location.host });
+    c.toBlob((b) => { setUrl(URL.createObjectURL(b)); window.__semanaBlob = b; }, 'image/png');
+  };
+  useEffect(generar, [s]);
+  const compartir = async () => {
+    const b = window.__semanaBlob; if (!b) return;
+    const file = new File([b], 'mi-semana-oposicion.png', { type: 'image/png' });
+    if (navigator.canShare?.({ files: [file] })) {
+      try { await navigator.share({ files: [file], title: 'Mi semana de oposición', text: `Mi semana preparando Policía Nacional 💪 Hecho con ${location.host}` }); } catch {}
+    } else { const a = document.createElement('a'); a.href = url; a.download = 'mi-semana-oposicion.png'; a.click(); setMsg('Imagen descargada. Súbela a tus historias de Instagram o TikTok.'); }
+  };
+  return html`<section class="card share"><div class="card-h"><h2>Comparte tu semana</h2></div>
+    <p class="muted small">Una imagen con tu resumen de esta semana, lista para tus historias de Instagram o TikTok.</p>
+    <div class="share-row">${url ? html`<img class="share-img" src=${url} alt="Resumen de tu semana de estudio" />` : null}
+      <div><button class="btn primary" onClick=${compartir}><${Icon} n="share" s=${16} /> Compartir imagen</button>${msg ? html`<p class="muted small">${msg}</p>` : null}</div></div>
+  </section>`;
+}
+
 function Progreso() {
   const s = useStore();
   const hoy = today();
@@ -597,6 +818,8 @@ function Progreso() {
         </div>
       </section>
     </div>
+    <${LogrosCard} s=${s} />
+    <${CompartirCard} s=${s} />
     <section class="card"><h2>Repasos atrasados</h2>
       ${atrasados.length ? html`<ul class="hist">${atrasados.map(({ t, i }) => html`<li><a href=${'#/tema/' + t.id}><b>T${t.id}</b> ${t.titulo}</a><span class="due small">tocaba ${fmtRel(i.proximo)}</span><span></span></li>`)}</ul>` : html`<p class="empty">Ningún repaso atrasado. 👌</p>`}
     </section>
@@ -686,6 +909,9 @@ function TrialBanner() {
   useStore();
   if (acceso.estado !== 'prueba') return null;
   const ms = acceso.finPrueba - Date.now();
+  const c = E.cifras(getState());
+  if (ms < 1.5 * DIA_MS && c.actividad) return html`<div class="trial urge"><span>⏳ <b>Te queda ${restante(ms)} de prueba.</b> Llevas ${fmtMin(c.min)} de estudio y ${c.temas} tema${c.temas === 1 ? '' : 's'} trabajado${c.temas === 1 ? '' : 's'}${c.planHasta ? `, con plan hasta el ${fmtCorto(c.planHasta)}` : ''}. No lo pierdas:</span>
+    <a class="link" href="#/cuenta">acceso de por vida por ${CONFIG.precio} →</a></div>`;
   return html`<div class="trial"><span><b>Prueba gratuita:</b> te quedan ${restante(ms)}.</span>
     <a class="link" href="#/cuenta">Conseguir acceso de por vida (${CONFIG.precio}) →</a></div>`;
 }
@@ -763,7 +989,12 @@ function Paywall() {
       <button class="btn ghost" onClick=${logout}>Cerrar sesión</button></header>
     <section class="price-wrap"><div class="price">
       <h1>Tu prueba gratuita ha terminado</h1>
-      <p class="muted">Tus datos están guardados. Consigue el acceso de por vida para seguir donde lo dejaste.</p>
+      ${(() => { const c = E.cifras(getState()); return c.actividad ? html`<div class="cifras">
+        <div class="k-l">Tu prueba en cifras</div>
+        <div class="cifras-g"><div><b>${E.fmtNum(c.min / 60)} h</b><span>de estudio</span></div><div><b>${c.temas}</b><span>${c.temas === 1 ? 'tema trabajado' : 'temas trabajados'}</span></div><div><b>${c.vueltas + c.repasos}</b><span>vueltas y repasos</span></div><div><b>${c.dias}</b><span>${c.dias === 1 ? 'día estudiando' : 'días estudiando'}</span></div></div>
+        ${c.tareasFuturas ? html`<p class="small">📅 Tienes <b>${c.tareasFuturas} tareas</b> planificadas${c.planHasta ? ` hasta el ${fmtCorto(c.planHasta)}` : ''}. Todo sigue guardado.</p>` : null}
+      </div>
+      <p class="muted">No pierdas tu progreso: sigue exactamente donde lo dejaste.</p>` : html`<p class="muted">Tus datos están guardados. Consigue el acceso de por vida para seguir donde lo dejaste.</p>`; })()}
       <${Precio} /><div class="muted">pago único · sin suscripción</div>
       <${BotonPago} cls="btn primary big" />
       <ol class="steps">
@@ -922,6 +1153,10 @@ function App() {
   }, [s.settings.theme]);
   useEffect(() => { window.scrollTo(0, 0); }, [hash]);
   useEffect(() => { document.title = CONFIG.nombre; }, []);
+  useLogros(s);
+  const [wiz, setWiz] = useState(null);
+  const sincronizado = ['sincronizado', 'local'].includes(cloud.status);
+  useEffect(() => { if (wiz === null && permitido() && sincronizado && necesitaBienvenida(s)) setWiz(true); }, [s, sincronizado]);
   const parts = hash.replace(/^#\/?/, '').split('/');
   const route = parts[0] || 'hoy';
   if (route === 'legal') return html`<${Legal} doc=${parts[1]} />`;
@@ -940,7 +1175,10 @@ function App() {
       <div class="side-f"><${SyncDot} /><div class="legal-links"><a href="#/legal/terminos">Términos</a> · <a href="#/legal/privacidad">Privacidad</a></div></div>
     </nav>
     <main><${TrialBanner} />${Page}</main>
-    ${modal ? html`<${RegistroModal} ...${modal} onClose=${() => setModal(null)} />` : null}
+    <${Timer} onTerminar=${setModal} />
+    ${modal ? html`<${RegistroModal} key=${JSON.stringify(modal)} ...${modal} onClose=${() => setModal(null)} />` : null}
+    ${wiz ? html`<${Bienvenida} onFin=${() => { setWiz(false); go('#/hoy'); }} />` : null}
+    <${Toasts} />
   </div>`;
 }
 

@@ -20,6 +20,7 @@ export const defaultState = () => ({
     horasObjetivoSemana: 20,
     objetivosVuelta: [], // fecha objetivo para terminar cada vuelta (índice 0 = vuelta 1)
     repasosEnPrimeraVuelta: false,
+    onboarded: false, // ya ha pasado por la bienvenida
   },
   temas: {}, // { [id]: { semaforo, proximo, regs: [{id, date, tipo:'estudio'|'repaso'|'vuelta', min?, note?, rating?}] } }
   tasks: [], // { id, date, title, type, done, temaId?, kind?, auto? }
@@ -56,7 +57,7 @@ if (!enabled) {
   if (demo) {
     acceso.estado = demo === 'landing' ? 'sin-sesion' : demo;
     acceso.esAdmin = demo === 'admin';
-    acceso.finPrueba = Date.now() + 2.3 * DIA;
+    acceso.finPrueba = Date.now() + (parseFloat(new URLSearchParams(location.search).get('quedan')) || 2.3) * DIA;
     cloud.user = demo === 'landing' ? null : { uid: 'demo', name: 'Persona Demo', email: 'demo@ejemplo.com' };
   }
 }
