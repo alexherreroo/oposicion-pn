@@ -1,0 +1,10 @@
+{%- comment -%} Casilla obligatoria de renuncia al desistimiento (art. 103.m TRLGDCU). modo: 'producto' guarda la aceptación en la línea del pedido; 'carrito' la guarda como atributo del pedido. tipo (opcional): 'app' (solo el planificador), 'pdf_app' (PDF + planificador); por defecto, PDF. {%- endcomment -%}
+{%- if modo == 'carrito' -%}{%- assign campo = 'attributes[Consentimiento]' -%}{%- else -%}{%- assign campo = 'properties[Consentimiento]' -%}{%- endif -%}
+<label class="consent-digital">
+  <input type="checkbox" required name="{{ campo }}" value="Sí: acepta la entrega inmediata del contenido digital y la pérdida del derecho de desistimiento">
+  {%- case tipo -%}
+    {%- when 'app' -%}<span>Acepto que el acceso al planificador se active de inmediato y entiendo que, una vez activado, <strong>pierdo el derecho de desistimiento</strong>.</span>
+    {%- when 'pdf_app' -%}<span>Acepto recibir el PDF y el acceso al planificador de inmediato y entiendo que, una vez disponibles, <strong>pierdo el derecho de desistimiento</strong>.</span>
+    {%- else -%}<span>Acepto recibir el PDF de inmediato y entiendo que, una vez disponible la descarga, <strong>pierdo el derecho de desistimiento</strong>.</span>
+  {%- endcase -%}
+</label>

@@ -1,0 +1,76 @@
+{%- assign is_gc = false -%}{%- if product.title contains 'Guardia Civil' -%}{%- assign is_gc = true -%}{%- endif -%}
+{%- comment -%} Planificador: 'app' = solo la app (tipo Acceso digital); 'pdf_app' = pack de PDF que incluye el planificador (SKU con PLANIFICADOR). {%- endcomment -%}
+{%- assign sku = product.selected_or_first_available_variant.sku | default: '' -%}
+{%- assign tipo = '' -%}
+{%- if product.type == 'Acceso digital' -%}{%- assign tipo = 'app' -%}{%- elsif sku contains 'PLANIFICADOR' -%}{%- assign tipo = 'pdf_app' -%}{%- endif -%}
+{%- assign url_app = 'https://alexherreroo.github.io/oposicion-pn/' -%}
+{%- assign cmp = product.selected_or_first_available_variant.compare_at_price -%}
+<section class="pd">
+  <div class="pd-img rv">{% if product.featured_image %}<img src="{{ product.featured_image | image_url: width: 900 }}" srcset="{{ product.featured_image | image_url: width: 500 }} 500w, {{ product.featured_image | image_url: width: 900 }} 900w" sizes="(min-width:860px) 520px, 90vw" alt="{{ product.title | escape }}" width="900" height="{{ 900 | divide: product.featured_image.aspect_ratio | round }}" fetchpriority="high">{% else %}<div style="aspect-ratio:4/3;display:flex;align-items:center;justify-content:center;font-size:4rem">🗺️</div>{% endif %}</div>
+  <div class="rv" style="--d:.1s">
+    <p class="pd-crumb"><a href="/">Inicio</a> › {% if is_gc %}<a href="/#guardia-civil">Guardia Civil</a>{% else %}<a href="/#policia-nacional">Policía Nacional</a>{% endif %}</p>
+    <h1>{{ product.title }}</h1>
+    {%- case tipo -%}
+      {%- when 'app' -%}<span class="pd-pill">App web · PC y móvil · acceso inmediato</span>
+      {%- when 'pdf_app' -%}<span class="pd-pill">PDF · descarga inmediata</span> <span class="pd-pill">+ Planificador incluido</span>
+      {%- else -%}<span class="pd-pill">PDF · descarga inmediata</span>
+    {%- endcase -%}
+    <div class="pd-price">{% if cmp > product.price %}<s style="font-size:.6em;opacity:.55;margin-right:8px">{{ cmp | money }}</s>{% endif %}{{ product.price | money }}</div>
+    {%- if tipo == 'app' and cmp > product.price -%}<p class="note" style="margin:-4px 0 10px;font-weight:700">🚀 Oferta de lanzamiento · acceso de por vida</p>{%- endif -%}
+    <div class="pd-buy">
+    {% form 'product', product %}
+      <input type="hidden" name="id" value="{{ product.selected_or_first_available_variant.id }}">
+      <input type="hidden" name="return_to" value="/checkout">
+      {%- if product.available -%}{% render 'consentimiento-digital', modo: 'producto', tipo: tipo %}{%- endif -%}
+      <button type="submit" class="btn"{% unless product.available %} disabled{% endunless %}>{% if product.available %}Comprar ahora{% else %}No disponible{% endif %}</button>
+    {% endform %}
+    {%- case tipo -%}
+      {%- when 'app' -%}<p class="note" style="margin:10px 0 0;text-align:center">🔒 Pago seguro con Shopify · El acceso se activa solo con el email de tu compra</p>
+        <p class="note" style="margin:6px 0 0;text-align:center"><a href="{{ url_app }}" target="_blank" rel="noopener">¿Aún no la has probado? Pruébala gratis 3 días →</a></p>
+      {%- when 'pdf_app' -%}<p class="note" style="margin:10px 0 0;text-align:center">🔒 Pago seguro con Shopify · Enlace de descarga tras el pago y planificador activado con el email de tu compra</p>
+      {%- else -%}<p class="note" style="margin:10px 0 0;text-align:center">🔒 Pago seguro con Shopify · Enlace de descarga tras el pago</p>
+    {%- endcase -%}
+    </div>
+    <div class="pd-desc">{{ product.description }}</div>
+    {%- if tipo == 'app' -%}
+    <ul class="pd-list">
+      <li>Los 45 temas de la Escala Básica, con contador de vueltas y clasificación</li>
+      <li>Registro de estudio con minutos y nota de por dónde te quedaste</li>
+      <li>Plan automático diario, semanal y mensual hasta tu fecha objetivo</li>
+      <li>En el ordenador y en el móvil, sincronizado y sin conexión</li>
+      <li>Pago único, sin suscripción · acceso de por vida</li>
+    </ul>
+    <div class="pd-upd"><b>🔄 Mejoras incluidas</b><span>Todas las funciones nuevas que añadamos al planificador te llegan sin coste: es un pago único de por vida.</span></div>
+    {%- else -%}
+    <ul class="pd-list">
+      <li>Cada mapa: artículo clave, trampa típica y cómo cae en el test</li>
+      <li>Elaborado a partir del BOE y textos oficiales</li>
+      <li>PDF en A4, listo para pantalla o impresión</li>
+      <li>Actualizaciones incluidas: si cambia la normativa, recibes la versión nueva por correo</li>
+      {%- if tipo == 'pdf_app' -%}<li><strong>Planificador Policía Nacional de por vida:</strong> app para organizar tus vueltas, repasos y plan de estudio</li>{%- endif -%}
+      <li>Uso personal · pago único, sin suscripción</li>
+    </ul>
+    <div class="pd-upd"><b>🔄 Actualizaciones incluidas</b><span>Si cambia una ley o la convocatoria y actualizamos los mapas, te enviamos la versión nueva por correo, sin coste. Revisamos el BOE cada semana.</span></div>
+    {%- endif -%}
+  </div>
+  <div class="pd-faq mp rv">
+    <h2>Preguntas frecuentes</h2>
+    {%- if tipo == 'app' -%}
+    <details><summary>¿Cómo accedo después de comprar?</summary><p>Entra en <a href="{{ url_app }}" target="_blank" rel="noopener">la app del planificador</a> con tu cuenta de Google usando el mismo email de la compra. El acceso de por vida se activa automáticamente en unos segundos. Si compraste con otro email, escríbenos y lo activamos.</p></details>
+    <details><summary>¿Puedo probarla antes de pagar?</summary><p>Sí: tienes 3 días de prueba gratis con todas las funciones, sin tarjeta. Si luego compras, conservas todo lo que hayas registrado.</p></details>
+    <details><summary>¿Funciona en el móvil?</summary><p>Sí. Funciona en el navegador del ordenador y del móvil, se puede instalar como app y tus datos se sincronizan entre dispositivos.</p></details>
+    <details><summary>¿Incluye temario o test?</summary><p>No. Es una herramienta para organizar tu estudio. Si quieres también los mapas, el planificador viene incluido en el <a href="/products/pack-completo">Pack Completo + Planificador</a>.</p></details>
+    <details><summary>¿Es oficial?</summary><p>No. Es una herramienta independiente, sin relación con la Policía Nacional ni con el Ministerio del Interior.</p></details>
+    <details><summary>¿Puedo pedir la devolución?</summary><p>Es contenido digital de acceso inmediato; se aplica lo indicado en las <a href="/policies/refund-policy">condiciones de venta</a>. Por eso puedes probarla gratis antes de comprar.</p></details>
+    {%- else -%}
+    <details><summary>¿Cómo recibo el PDF?</summary><p>Tras el pago recibes un enlace de descarga inmediata en la confirmación y por correo electrónico.</p></details>
+    {%- if tipo == 'pdf_app' -%}<details><summary>¿Cómo activo el planificador incluido?</summary><p>Entra en <a href="{{ url_app }}" target="_blank" rel="noopener">la app del planificador</a> con tu cuenta de Google usando el mismo email de la compra. El acceso de por vida se activa automáticamente en unos segundos.</p></details>{%- endif -%}
+    <details><summary>¿Es material oficial?</summary><p>No. Es material de estudio no oficial, sin relación con {% if is_gc %}la Guardia Civil{% else %}la Policía Nacional{% endif %} ni con el Ministerio del Interior. Contrasta siempre con el BOE y con la convocatoria vigente.</p></details>
+    <details><summary>¿Se actualizan los mapas si cambia una ley?</summary><p>Sí. Revisamos cada semana las normas en las que se basan los mapas. Si cambia algo que afecta a tu pack, lo actualizamos y te enviamos la versión nueva por correo, sin coste adicional.</p></details>
+    <details><summary>¿Puedo imprimirlo?</summary><p>Sí, para uso personal. No está permitido compartirlo ni revenderlo.</p></details>
+    <details><summary>¿Puedo pedir la devolución?</summary><p>Es contenido digital de descarga inmediata; se aplica lo indicado en las <a href="/policies/refund-policy">condiciones de venta</a>.</p></details>
+    {%- endif -%}
+  </div>
+</section>
+<div class="pd-bar"><b>{{ product.price | money }}</b>{% if product.available %}<a class="btn" href="#main" onclick="document.querySelector('.pd-buy').scrollIntoView({behavior:'smooth',block:'center'});return false">Comprar</a>{% endif %}</div>
+{% schema %}{"name":"Producto"}{% endschema %}

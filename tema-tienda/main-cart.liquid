@@ -1,0 +1,11 @@
+{%- assign tipo_carrito = '' -%}{%- assign hay_app = false -%}{%- assign hay_pdf = false -%}
+{%- for item in cart.items -%}{%- if item.sku contains 'PLANIFICADOR' -%}{%- assign hay_app = true -%}{%- endif -%}{%- if item.product.type != 'Acceso digital' -%}{%- assign hay_pdf = true -%}{%- endif -%}{%- endfor -%}
+{%- if hay_app and hay_pdf -%}{%- assign tipo_carrito = 'pdf_app' -%}{%- elsif hay_app -%}{%- assign tipo_carrito = 'app' -%}{%- endif -%}
+<section class="wrap"><h1>Carrito</h1>
+{% if cart.item_count == 0 %}<p>Tu carrito está vacío.</p><a class="btn" href="{{ routes.root_url }}#packs">Ver packs</a>
+{% else %}<form action="{{ routes.cart_url }}" method="post">
+{% for item in cart.items %}<div class="line"><span>{{ item.product.title }}</span><span>{{ item.final_line_price | money }}</span></div>{% endfor %}
+<p class="total">Total: {{ cart.total_price | money }}</p>
+{% render 'consentimiento-digital', modo: 'carrito', tipo: tipo_carrito %}
+<button type="submit" name="checkout" class="btn">Finalizar compra</button></form>{% endif %}</section>
+{% schema %}{"name":"Carrito"}{% endschema %}

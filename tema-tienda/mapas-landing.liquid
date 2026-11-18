@@ -51,8 +51,7 @@
 .mp-plan ul{list-style:none;padding:0;margin:0 0 18px;display:grid;gap:8px}
 .mp-plan li{padding-left:28px;position:relative}.mp-plan li:before{content:"✓";position:absolute;left:0;top:0;width:20px;height:20px;border-radius:50%;background:#e2f5e8;color:#14804a;font-weight:800;font-size:.8rem;display:grid;place-items:center}
 .mp-plan .mp-price small{font-size:.95rem;color:#5b6577;font-weight:600;margin-left:6px}
-.mp-plan-cta{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-start;margin-bottom:10px}
-.mp-plan-cta>a,.mp-plan-cta>form{flex:1 1 200px}
+.mp-plan-cta{display:flex;flex-direction:column;gap:12px;max-width:420px;margin-bottom:10px}
 .mp-btn.mp-gold{background:var(--g);color:#10204a!important}
 .mp-plan-img img{width:100%;height:auto;display:block;border-radius:14px;border:1px solid #dbe1ee;box-shadow:0 18px 44px rgba(18,48,107,.18)}
 @media (max-width:820px){.mp-plan{grid-template-columns:1fr}.mp-plan-img{order:-1}}
@@ -97,7 +96,7 @@
         {%- form 'product', plan -%}
           <input type="hidden" name="id" value="{{ plan.selected_or_first_available_variant.id }}">
           <input type="hidden" name="return_to" value="/checkout">
-          {%- if plan.available -%}{% render 'consentimiento-digital', modo: 'producto' %}{%- endif -%}
+          {%- if plan.available -%}{% render 'consentimiento-digital', modo: 'producto', tipo: 'app' %}{%- endif -%}
           <button type="submit" class="mp-btn"{% unless plan.available %} disabled{% endunless %}>{% if plan.available %}Comprar · {{ plan.price | money }}{% else %}No disponible{% endif %}</button>
         {%- endform -%}
       </div>
@@ -149,7 +148,8 @@
           {%- form 'product', prod -%}
             <input type="hidden" name="id" value="{{ prod.selected_or_first_available_variant.id }}">
             <input type="hidden" name="return_to" value="/checkout">
-            {%- if prod.available -%}{% render 'consentimiento-digital', modo: 'producto' %}{%- endif -%}
+            {%- assign tipo_c = '' -%}{%- if k == 'full' or k == 'bonos' -%}{%- assign tipo_c = 'pdf_app' -%}{%- endif -%}
+            {%- if prod.available -%}{% render 'consentimiento-digital', modo: 'producto', tipo: tipo_c %}{%- endif -%}
             <button type="submit" class="mp-btn"{% unless prod.available %} disabled{% endunless %}>{% if prod.available %}Comprar ahora{% else %}No disponible{% endif %}</button>
           {%- endform -%}
         {%- else -%}<span class="mp-btn mp-off">Asigna el producto en el editor</span>{%- endif -%}
