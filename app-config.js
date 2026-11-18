@@ -29,10 +29,10 @@ export default {
   urlTienda: 'https://www.opomapas.com',
 
   // --- Contacto y datos legales (obligatorios para vender en España) ---
-  emailSoporte: '',
+  emailSoporte: 'opomapas@gmail.com',
   titular: '', // tu nombre completo o el de tu empresa
   nif: '',
   domicilio: '', // dirección completa (exigida por la LSSI)
-  web: '', // dirección de la web, p. ej. https://oposicionpn.com
+  web: 'https://www.opomapas.com', // dirección de la web
   fechaLegal: '17 de noviembre de 2026', // fecha de última actualización de los textos legales
 };
