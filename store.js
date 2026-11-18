@@ -48,7 +48,7 @@ const listeners = new Set();
 
 export const cloud = { enabled, user: null, status: enabled ? 'cargando' : 'local', error: '' };
 // estado: cargando | sin-sesion | prueba | pago | admin | caducada | local
-export const acceso = { estado: enabled ? 'cargando' : 'local', finPrueba: null, esAdmin: false, licencia: false };
+export const acceso = { estado: enabled ? 'cargando' : 'local', finPrueba: null, esAdmin: false, licencia: false, tieneMapas: false };
 export const permitido = () => ['prueba', 'pago', 'admin', 'local'].includes(acceso.estado);
 
 // Solo para ver pantallas sin Firebase durante el desarrollo: ?demo=landing|caducada|prueba|admin
@@ -57,6 +57,7 @@ if (!enabled) {
   if (demo) {
     acceso.estado = demo === 'landing' ? 'sin-sesion' : demo;
     acceso.esAdmin = demo === 'admin';
+    acceso.tieneMapas = new URLSearchParams(location.search).has('mapas');
     acceso.finPrueba = Date.now() + (parseFloat(new URLSearchParams(location.search).get('quedan')) || 2.3) * DIA;
     cloud.user = demo === 'landing' ? null : { uid: 'demo', name: 'Persona Demo', email: 'demo@ejemplo.com' };
   }
@@ -103,7 +104,7 @@ function pushRemote() {
 }
 
 function guardarAcceso(uid) {
-  try { localStorage.setItem('pn-acceso:' + uid, JSON.stringify({ finPrueba: acceso.finPrueba, esAdmin: acceso.esAdmin, licencia: acceso.licencia })); } catch {}
+  try { localStorage.setItem('pn-acceso:' + uid, JSON.stringify({ finPrueba: acceso.finPrueba, esAdmin: acceso.esAdmin, licencia: acceso.licencia, tieneMapas: acceso.tieneMapas })); } catch {}
 }
 function cargarAccesoGuardado(uid) {
   try { return JSON.parse(localStorage.getItem('pn-acceso:' + uid) || 'null'); } catch { return null; }
@@ -188,7 +189,8 @@ export async function initCloud() {
     auth.onAuthStateChanged(fb.auth, (user) => {
       [unsubDoc, unsubLic].forEach((f) => f && f());
       unsubDoc = unsubLic = null;
-      Object.assign(acceso, { finPrueba: null, esAdmin: false, licencia: false });
+      Object.assign(acceso, { finPrueba: null, esAdmin: false, licencia: false, tieneMapas: false });
+      try { user ? localStorage.setItem('pn-sesion', '1') : localStorage.removeItem('pn-sesion'); } catch {}
       if (!user) {
         cloud.user = null; storageKey = BASE_KEY; state = defaultState();
         cloud.status = 'sin sesión'; acceso.estado = 'sin-sesion'; notify(); return;
@@ -200,7 +202,12 @@ export async function initCloud() {
       const prev = cargarAccesoGuardado(user.uid);
       if (prev) { Object.assign(acceso, prev); recalcular(); } else { acceso.estado = 'cargando'; notify(); }
       // Si el administrador activa la licencia, se desbloquea al momento.
-      unsubLic = fs.onSnapshot(fs.doc(db, 'licencias', cloud.user.email), (s) => { acceso.licencia = s.exists(); recalcular(); }, () => {});
+      unsubLic = fs.onSnapshot(fs.doc(db, 'licencias', cloud.user.email), (s) => {
+        acceso.licencia = s.exists();
+        // Si compró un pack (SKU que empieza por PACK-) ya tiene los mapas: no le ofrecemos la tienda.
+        acceso.tieneMapas = (s.data()?.skus || []).some((x) => /^PACK-/i.test(x));
+        recalcular(); notify();
+      }, () => {});
       comprobarCuenta();
     });
   } catch (e) {
@@ -222,11 +229,15 @@ export async function login() {
 export async function logout() { if (fb) await fb.signOut(fb.auth); }
 export async function reComprobar() { if (fb && cloud.user) { cloud.error = ''; await comprobarCuenta(); notify(); } }
 
-export function urlPago() {
-  if (!CONFIG.urlPago) return '';
+// Rellena {email} y {uid} del usuario en un enlace de compra y añade la etiqueta UTM.
+export function conUsuario(plantilla, medio = '') {
+  if (!plantilla) return '';
   const u = cloud.user || {};
-  return CONFIG.urlPago.replaceAll('{email}', encodeURIComponent(u.email || '')).replaceAll('{uid}', encodeURIComponent(u.uid || ''));
+  let url = plantilla.replaceAll('{email}', encodeURIComponent(u.email || '')).replaceAll('{uid}', encodeURIComponent(u.uid || ''));
+  if (medio) url += (url.includes('?') ? '&' : '?') + `utm_source=app&utm_medium=${medio}&utm_campaign=planificador`;
+  return url;
 }
+export const urlPago = (medio = 'pago') => conUsuario(CONFIG.urlPago, medio);
 
 // Derecho de supresión: borra tus datos de estudio de la nube y de este navegador.
 export async function borrarMisDatos() {

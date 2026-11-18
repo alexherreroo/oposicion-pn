@@ -31,6 +31,26 @@ export default {
   tienda: 'OpoMapas',
   urlTienda: 'https://www.opomapas.com',
 
+  // --- Enlaces a la tienda (solo se muestran a quien no tiene los mapas: en prueba o con el planificador suelto) ---
+  // Todos llevan utm_source=app para medir en Shopify qué ventas vienen de la app.
+  mapas: {
+    gratis: 'https://www.opomapas.com/pages/mapas-gratis-policia-nacional',
+    articulo: 'https://www.opomapas.com/blogs/noticias/tema-{n}-policia-nacional',
+    temasSinArticulo: [12, 13, 15, 44, 45], // para estos se enlaza a los mapas gratis
+    packBloque: {
+      J: { nombre: 'Pack Jurídicas', url: 'https://www.opomapas.com/products/pack-juridicas' },
+      S: { nombre: 'Pack Sociales', url: 'https://www.opomapas.com/products/pack-sociales' },
+      T: { nombre: 'Pack Técnico-Científicas', url: 'https://www.opomapas.com/products/pack-tecnico-cientificas' },
+    },
+  },
+  // Pack que se ofrece al terminar la prueba (debe incluir el planificador: SKU con PLANIFICADOR).
+  packOferta: {
+    nombre: 'Pack Completo + Planificador',
+    precio: '14,99 €',
+    precioSeparado: '24,96 €', // 3 bloques de mapas (14,97 €) + planificador (9,99 €)
+    url: 'https://www.opomapas.com/cart/61682956697934:1?checkout[email]={email}&attributes[app_email]={email}&attributes[app_uid]={uid}',
+  },
+
   // --- Contacto y datos legales (obligatorios para vender en España) ---
   emailSoporte: 'opomapas@gmail.com',
   titular: '', // tu nombre completo o el de tu empresa

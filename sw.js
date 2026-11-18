@@ -1,5 +1,5 @@
 // Service worker: permite abrir la app sin conexión. Sube el número de versión al cambiar archivos.
-const CACHE = 'pn-v8';
+const CACHE = 'pn-v9';
 const APP = ['./', 'index.html', 'styles.css', 'app.js', 'logic.js', 'store.js', 'firebase-config.js', 'app-config.js', 'engage.js',
   'preact-htm.js', 'manifest.webmanifest', 'icon.svg', 'icon-192.png', 'icon-512.png'];
 

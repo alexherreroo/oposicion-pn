@@ -1,6 +1,6 @@
 import { html, render, useState, useEffect, useMemo } from './preact-htm.js';
 import * as L from './logic.js';
-import { getState, subscribe, update, replaceAll, cloud, acceso, permitido, initCloud, login, logout, defaultState, urlPago, reComprobar, borrarMisDatos, adminListar, adminActivar, adminRevocar, adminAmpliarPrueba } from './store.js';
+import { getState, subscribe, update, replaceAll, cloud, acceso, permitido, initCloud, login, logout, defaultState, urlPago, conUsuario, reComprobar, borrarMisDatos, adminListar, adminActivar, adminRevocar, adminAmpliarPrueba } from './store.js';
 import CONFIG from './app-config.js';
 import * as E from './engage.js';
 
@@ -312,6 +312,48 @@ function RitmoCard({ s }) {
     <p class="muted small">Vuelta ${r.vuelta}: ${45 - r.restantes}/45 temas · objetivo ${fmtCorto(r.objetivo)} (${r.dias} días)</p></div></section>`;
 }
 
+
+// ---------- Enlaces a la tienda (solo para quien no tiene los mapas) ----------
+const mostrarMapas = () => !!CONFIG.mapas && !acceso.tieneMapas;
+const utm = (url, medio, contenido) => url + (url.includes('?') ? '&' : '?') + `utm_source=app&utm_medium=${medio}&utm_campaign=planificador${contenido ? '&utm_content=' + contenido : ''}`;
+function MapasTema({ t }) {
+  if (!mostrarMapas()) return null;
+  const M = CONFIG.mapas;
+  const conArticulo = !M.temasSinArticulo.includes(t.id);
+  const url = conArticulo ? M.articulo.replace('{n}', t.id) : M.gratis;
+  const pack = M.packBloque[t.bloque];
+  return html`<section class="card mapas-tema">
+    <div class="mt-ico">🗺️</div>
+    <div class="mt-txt"><h2>Repasa este tema con sus mapas</h2>
+      <p class="muted small">Cada mapa resume el artículo clave, la trampa típica de examen y cómo cae en el test.</p>
+      <div class="btns">
+        <a class="btn sm" href=${utm(url, 'tema', 'tema-' + t.id)} target="_blank" rel="noopener">${conArticulo ? `Ver el tema ${t.id} en mapas` : '12 mapas gratis'}</a>
+        ${pack ? html`<a class="btn sm ghost" href=${utm(pack.url, 'tema', 'pack-' + t.bloque)} target="_blank" rel="noopener">Mapas completos: ${pack.nombre} →</a>` : null}
+      </div></div>
+  </section>`;
+}
+function MapasGratisCard() {
+  const s = useStore();
+  if (!mostrarMapas() || s.settings.ocultarMapasGratis) return null;
+  return html`<section class="card mapas-gratis">
+    <div class="mt-ico">🎁</div>
+    <div class="mt-txt"><h2>12 mapas gratis de Policía Nacional</h2>
+      <p class="muted small">Descárgalos en PDF: el artículo clave, la trampa típica y cómo cae en el test, de los temas más preguntados.</p>
+      <a class="btn sm primary" href=${utm(CONFIG.mapas.gratis, 'hoy')} target="_blank" rel="noopener">Descargar mapas gratis</a></div>
+    <button class="icon-btn sm" aria-label="Ocultar" title="No volver a mostrar" onClick=${() => update((x) => { x.settings.ocultarMapasGratis = true; })}><${Icon} n="x" s=${15} /></button>
+  </section>`;
+}
+function OfertaPack({ medio }) {
+  const P = CONFIG.packOferta;
+  if (!P || !mostrarMapas()) return null;
+  return html`<div class="oferta-pack">
+    <div><span class="oferta">🎁 Por solo 5 € más</span>
+      <p><b>${P.nombre}: ${P.precio}</b> <span class="muted">(<s>${P.precioSeparado}</s> por separado)</span></p>
+      <p class="muted small">El planificador de por vida y los 262 mapas en PDF de los 45 temas.</p></div>
+    <a class="btn" href=${conUsuario(P.url, medio)} target="_blank" rel="noopener">Llevarme el pack · ${P.precio}</a>
+  </div>`;
+}
+
 // ---------- HOY ----------
 const racha = (s) => E.racha(s);
 const minutosEntre = (s, a, b) => s.horas.filter((h) => h.date >= a && h.date <= b).reduce((x, h) => x + h.min, 0);
@@ -384,6 +426,7 @@ function Hoy() {
       <${AddTask} date=${hoy} />
     </section>
 
+    <${MapasGratisCard} />
     <section class="card">
       <h2>Horas de hoy: ${fmtMin(minHoy)}</h2>
       ${objH ? html`<div class="progress"><div style=${{ width: Math.min(100, (minSemana / objH) * 100) + '%' }}></div></div>
@@ -534,6 +577,7 @@ function TemaDetalle({ id }) {
 
     ${nota ? html`<section class="card quedaste-card"><div class="k-l">Por dónde te quedaste · ${fmtCorto(nota.date)}</div><p>${nota.note}</p></section>` : null}
 
+    <${MapasTema} t=${t} />
     <section class="card">
       <h2>Cómo lo llevo</h2>
       <div class="semsel"><button class=${'sembtn vacio' + (!manual ? ' on' : '')} onClick=${() => manual && setSem(manual)} aria-pressed=${!manual}><i></i>Sin empezar</button>
@@ -893,8 +937,8 @@ function restante(ms) {
 }
 const fechaHora = (ms) => new Date(ms).toLocaleString('es-ES', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
 
-function BotonPago({ cls = 'btn primary', texto }) {
-  const url = urlPago();
+function BotonPago({ cls = 'btn primary', texto, medio = 'pago' }) {
+  const url = urlPago(medio);
   if (!url) return html`<p class="note warn small">El enlace de pago aún no está configurado. ${CONFIG.emailSoporte ? html`Escribe a <a href=${'mailto:' + CONFIG.emailSoporte}>${CONFIG.emailSoporte}</a>.` : ''}</p>`;
   return html`<a class=${cls} href=${url} target="_blank" rel="noopener">${texto || `Comprar acceso de por vida · ${CONFIG.precio}`}</a>${CONFIG.tienda ? html`<span class="muted small">Pago seguro en la tienda ${CONFIG.tienda}</span>` : null}`;
 }
@@ -962,6 +1006,9 @@ function Landing() {
       <div class="hero-img"><img src="captura.png" alt="Pantalla principal de la aplicación con el plan del día" width="1200" height="820" /></div>
     </section>
     <section class="feats">${FEATURES.map(([ic, t, d]) => html`<div class="feat"><span class="f-ico"><${Icon} n=${ic} /></span><h3>${t}</h3><p>${d}</p></div>`)}</section>
+    ${CONFIG.mapas ? html`<section class="gratis-wrap"><div class="gratis">
+      <span class="g-ico">🎁</span><div><b>¿Aún no te decides?</b> Descarga 12 mapas gratis del temario de Policía Nacional en PDF.</div>
+      <a class="btn" href=${utm(CONFIG.mapas.gratis, 'portada')} target="_blank" rel="noopener">Descargar gratis</a></div></section>` : null}
     <section class="price-wrap"><div class="price">
       <div class="k-l">Acceso de por vida</div>
       <${Precio} /><div class="muted">pago único</div>
@@ -975,7 +1022,7 @@ function Landing() {
 
 function Footer() {
   return html`<footer class="l-foot">
-    <div><a href="#/legal/aviso">Aviso legal</a> · <a href="#/legal/privacidad">Privacidad</a> · <a href="#/legal/terminos">Términos y condiciones</a>${CONFIG.emailSoporte ? html` · <a href=${'mailto:' + CONFIG.emailSoporte}>Contacto</a>` : null}${CONFIG.urlTienda ? html` · <a href=${CONFIG.urlTienda} target="_blank" rel="noopener">Tienda ${CONFIG.tienda || ''}</a>` : null}</div>
+    <div><a href="#/legal/aviso">Aviso legal</a> · <a href="#/legal/privacidad">Privacidad</a> · <a href="#/legal/terminos">Términos y condiciones</a>${CONFIG.emailSoporte ? html` · <a href=${'mailto:' + CONFIG.emailSoporte}>Contacto</a>` : null}${CONFIG.urlTienda ? html` · <a href=${utm(CONFIG.urlTienda, 'pie')} target="_blank" rel="noopener">Tienda ${CONFIG.tienda || ''}</a>` : null}</div>
     <p class="muted small">${CONFIG.nombre} es una herramienta independiente y no está vinculada a la Policía Nacional ni al Ministerio del Interior.</p>
   </footer>`;
 }
@@ -997,6 +1044,7 @@ function Paywall() {
       <p class="muted">No pierdas tu progreso: sigue exactamente donde lo dejaste.</p>` : html`<p class="muted">Tus datos están guardados. Consigue el acceso de por vida para seguir donde lo dejaste.</p>`; })()}
       <${Precio} /><div class="muted">pago único · sin suscripción</div>
       <${BotonPago} cls="btn primary big" />
+      <${OfertaPack} medio="pago-pack" />
       <ol class="steps">
         <li>Completa la compra${CONFIG.tienda ? ` en ${CONFIG.tienda}` : ''}. Tu cuenta <b>${cloud.user?.email}</b> va vinculada al pedido.</li>
         <li>Tu acceso se activa ${CONFIG.tiempoActivacion}: vuelve a esta pestaña y la app se desbloquea sola.</li>
@@ -1014,7 +1062,7 @@ function CuentaCard() {
   useStore();
   const [borrando, setBorrando] = useState(false);
   const u = cloud.user;
-  if (!cloud.enabled) return html`<section class="card"><h2>Cuenta</h2><div class="note"><b>Modo local.</b> Falta configurar Firebase (ver LEEME.md).</div></section>`;
+  if (!cloud.enabled && !u) return html`<section class="card"><h2>Cuenta</h2><div class="note"><b>Modo local.</b> Falta configurar Firebase (ver LEEME.md).</div></section>`;
   if (!u) return null;
   const est = {
     prueba: html`<span class="badge prueba">Prueba gratuita</span> <span class="muted small">termina el ${fechaHora(acceso.finPrueba)} (quedan ${restante(acceso.finPrueba - Date.now())})</span>`,
@@ -1031,8 +1079,9 @@ function CuentaCard() {
       <div><b>${u.name}</b><div class="muted small">${u.email} · ${cloud.status}</div></div>
       <button class="btn sm ghost" onClick=${logout}>Cerrar sesión</button></div>
     <p>${est}</p>
-    ${acceso.estado === 'prueba' ? html`<div class="buy"><p>${CONFIG.oferta ? html`<span class="oferta">${CONFIG.oferta}</span> ` : null}Pago único de <b>${CONFIG.precio}</b>${CONFIG.precioAntes ? html` <s class="muted">${CONFIG.precioAntes}</s>` : null} para usarla para siempre. Tus datos se conservan.</p><${BotonPago} />
-      <p class="muted small">Tras pagar, tu acceso se activa ${CONFIG.tiempoActivacion}.</p></div>` : null}
+    ${acceso.estado === 'prueba' ? html`<div class="buy"><p>${CONFIG.oferta ? html`<span class="oferta">${CONFIG.oferta}</span> ` : null}Pago único de <b>${CONFIG.precio}</b>${CONFIG.precioAntes ? html` <s class="muted">${CONFIG.precioAntes}</s>` : null} para usarla para siempre. Tus datos se conservan.</p><${BotonPago} medio="cuenta" />
+      <p class="muted small">Tras pagar, tu acceso se activa ${CONFIG.tiempoActivacion}.</p>
+      <${OfertaPack} medio="cuenta-pack" /></div>` : null}
     ${acceso.esAdmin ? html`<p><a class="btn" href="#/admin">Abrir panel de administración</a></p>` : null}
     ${cloud.error ? html`<p class="error small">${cloud.error}</p>` : null}
     <details><summary class="small muted">Eliminar mi cuenta</summary>
@@ -1152,7 +1201,7 @@ function App() {
     if (th === 'auto') delete document.documentElement.dataset.theme; else document.documentElement.dataset.theme = th;
   }, [s.settings.theme]);
   useEffect(() => { window.scrollTo(0, 0); }, [hash]);
-  useEffect(() => { document.title = CONFIG.nombre; }, []);
+  useEffect(() => { if (cloud.user || acceso.estado === 'local') document.title = CONFIG.nombre; }, [acceso.estado]);
   useLogros(s);
   const [wiz, setWiz] = useState(null);
   const sincronizado = ['sincronizado', 'local'].includes(cloud.status);
@@ -1160,6 +1209,9 @@ function App() {
   const parts = hash.replace(/^#\/?/, '').split('/');
   const route = parts[0] || 'hoy';
   if (route === 'legal') return html`<${Legal} doc=${parts[1]} />`;
+  // Sin sesión guardada en este navegador, mostramos la portada mientras Firebase arranca (sin parpadeo).
+  const haySesion = (() => { try { return !!localStorage.getItem('pn-sesion'); } catch { return true; } })();
+  if (acceso.estado === 'cargando' && !cloud.user && !haySesion && !cloud.error) return html`<${Landing} />`;
   if (acceso.estado === 'cargando') return html`<${Splash} />`;
   if (acceso.estado === 'sin-sesion') return html`<${Landing} />`;
   if (acceso.estado === 'caducada') return html`<${Paywall} />`;

@@ -54,6 +54,8 @@ export default {
             origen: { stringValue: 'shopify' },
             pedido: { stringValue: String(pedido.name || pedido.order_number || pedido.id || '') },
             nota: { stringValue: `Shopify ${pedido.name || ''}`.trim() },
+            // Productos del pedido: la app oculta los enlaces a los mapas a quien compró un pack.
+            skus: { arrayValue: { values: (pedido.line_items || []).map((l) => l.sku).filter(Boolean).map((x) => ({ stringValue: String(x) })) } },
           } }),
         });
         if (!r.ok) throw new Error(`Firestore ${r.status}: ${await r.text()}`);

@@ -475,3 +475,18 @@ mark { background: var(--amarillo-soft); color: var(--amarillo); font-weight: 70
 body.con-timer .page { padding-bottom: 130px; }
 @media (max-width: 760px) { body.con-timer .page { padding-bottom: 230px; } }
 @media (max-width: 760px) { .side .side-f { display: none; } }
+
+/* ===== v7: enlaces a la tienda ===== */
+.mapas-tema, .mapas-gratis { display: flex; gap: 14px; align-items: flex-start; border-left: 5px solid #f5b800; }
+.mt-ico { font-size: 28px; line-height: 1; }
+.mt-txt { flex: 1; min-width: 0; }
+.mt-txt h2 { margin-bottom: 4px; }
+.mt-txt p { margin: 0 0 10px; }
+.oferta-pack { width: 100%; text-align: left; border: 2px dashed var(--amarillo); background: var(--amarillo-soft); border-radius: 14px; padding: 14px; margin: 14px 0 4px; display: flex; flex-direction: column; gap: 10px; }
+.oferta-pack p { margin: 6px 0 0; }
+.oferta-pack .btn { align-self: flex-start; }
+.buy .oferta-pack { margin-top: 12px; }
+.gratis-wrap { padding: 0 0 40px; }
+.gratis { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; background: var(--surface); border: 1px solid var(--border); border-left: 5px solid #f5b800; border-radius: var(--radius); padding: 16px 18px; max-width: 760px; margin: 0 auto; }
+.gratis > div { flex: 1 1 260px; }
+.g-ico { font-size: 28px; }
