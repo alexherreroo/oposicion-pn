@@ -676,6 +676,12 @@ function BotonPago({ cls = 'btn primary', texto }) {
   return html`<a class=${cls} href=${url} target="_blank" rel="noopener">${texto || `Comprar acceso de por vida · ${CONFIG.precio}`}</a>${CONFIG.tienda ? html`<span class="muted small">Pago seguro en la tienda ${CONFIG.tienda}</span>` : null}`;
 }
 
+// Precio con oferta (precio anterior tachado) si está configurada.
+function Precio() {
+  return html`${CONFIG.oferta ? html`<span class="oferta">${CONFIG.oferta}</span>` : null}
+    <div class="p-num">${CONFIG.precioAntes ? html`<s class="p-antes">${CONFIG.precioAntes}</s> ` : null}${CONFIG.precio}</div>`;
+}
+
 function TrialBanner() {
   useStore();
   if (acceso.estado !== 'prueba') return null;
@@ -720,11 +726,11 @@ function Landing() {
       <button class="btn ghost" onClick=${login}>Entrar</button></header>
     <section class="hero">
       <div class="hero-txt">
-        <span class="pill">Prueba gratis ${CONFIG.diasPrueba} días · sin tarjeta</span>
+        <span class="pill">Prueba gratis ${CONFIG.diasPrueba} días · sin tarjeta</span>${CONFIG.oferta ? html` <span class="pill oferta-pill">${CONFIG.oferta}: ${CONFIG.precio}</span>` : null}
         <h1>${CONFIG.eslogan}</h1>
         <p class="lead">Vueltas, repasos, horas de estudio, plan semanal y pruebas físicas en un solo sitio. Pensado para la Escala Básica.</p>
         <div class="cta"><${GoogleBtn} big /></div>
-        <p class="muted small">Después, pago único de <b>${CONFIG.precio}</b> para siempre. Sin suscripciones.</p>
+        <p class="muted small">Después, pago único de <b>${CONFIG.precio}</b>${CONFIG.precioAntes ? html` <s>${CONFIG.precioAntes}</s>` : null} para siempre. Sin suscripciones.</p>
         ${cloud.error ? html`<p class="error small">${cloud.error}</p>` : null}
       </div>
       <div class="hero-img"><img src="captura.png" alt="Pantalla principal de la aplicación con el plan del día" width="1200" height="820" /></div>
@@ -732,7 +738,7 @@ function Landing() {
     <section class="feats">${FEATURES.map(([ic, t, d]) => html`<div class="feat"><span class="f-ico"><${Icon} n=${ic} /></span><h3>${t}</h3><p>${d}</p></div>`)}</section>
     <section class="price-wrap"><div class="price">
       <div class="k-l">Acceso de por vida</div>
-      <div class="p-num">${CONFIG.precio}</div><div class="muted">pago único</div>
+      <${Precio} /><div class="muted">pago único</div>
       <ul>${['Todas las funciones, sin límites', 'Sincronización entre PC y móvil', 'Todas las actualizaciones futuras', `${CONFIG.diasPrueba} días de prueba gratis antes de pagar`].map((x) => html`<li><${Icon} n="check" s=${16} /> ${x}</li>`)}</ul>
       <${GoogleBtn} texto="Probar gratis" />
     </div></section>
@@ -758,7 +764,7 @@ function Paywall() {
     <section class="price-wrap"><div class="price">
       <h1>Tu prueba gratuita ha terminado</h1>
       <p class="muted">Tus datos están guardados. Consigue el acceso de por vida para seguir donde lo dejaste.</p>
-      <div class="p-num">${CONFIG.precio}</div><div class="muted">pago único · sin suscripción</div>
+      <${Precio} /><div class="muted">pago único · sin suscripción</div>
       <${BotonPago} cls="btn primary big" />
       <ol class="steps">
         <li>Completa la compra${CONFIG.tienda ? ` en ${CONFIG.tienda}` : ''}. Tu cuenta <b>${cloud.user?.email}</b> va vinculada al pedido.</li>
@@ -794,7 +800,7 @@ function CuentaCard() {
       <div><b>${u.name}</b><div class="muted small">${u.email} · ${cloud.status}</div></div>
       <button class="btn sm ghost" onClick=${logout}>Cerrar sesión</button></div>
     <p>${est}</p>
-    ${acceso.estado === 'prueba' ? html`<div class="buy"><p>Pago único de <b>${CONFIG.precio}</b> para usarla para siempre. Tus datos se conservan.</p><${BotonPago} />
+    ${acceso.estado === 'prueba' ? html`<div class="buy"><p>${CONFIG.oferta ? html`<span class="oferta">${CONFIG.oferta}</span> ` : null}Pago único de <b>${CONFIG.precio}</b>${CONFIG.precioAntes ? html` <s class="muted">${CONFIG.precioAntes}</s>` : null} para usarla para siempre. Tus datos se conservan.</p><${BotonPago} />
       <p class="muted small">Tras pagar, tu acceso se activa ${CONFIG.tiempoActivacion}.</p></div>` : null}
     ${acceso.esAdmin ? html`<p><a class="btn" href="#/admin">Abrir panel de administración</a></p>` : null}
     ${cloud.error ? html`<p class="error small">${cloud.error}</p>` : null}

@@ -11,7 +11,10 @@ export default {
   eslogan: 'Planifica tu oposición a Policía Nacional y da vueltas al temario sin perder el hilo.',
 
   // --- Venta ---
-  precio: '19,99 €', // texto que se muestra (el cobro real lo fija el producto en Shopify)
+  precio: '9,99 €', // texto que se muestra (el cobro real lo fija el producto en Shopify)
+  // Oferta: precio anterior tachado y etiqueta. Déjalos vacíos ('') para quitar la oferta.
+  precioAntes: '19,99 €',
+  oferta: 'Oferta de lanzamiento',
   // Días de prueba gratis. ⚠️ Si lo cambias, cambia también el número en firestore.rules
   // (duration.value(3, 'd')) o la app y la base de datos no coincidirán.
   diasPrueba: 3,

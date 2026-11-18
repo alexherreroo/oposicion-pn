@@ -405,3 +405,6 @@ mark { background: var(--amarillo-soft); color: var(--amarillo); font-weight: 70
 @media (max-width: 700px) { .urow { grid-template-columns: 1fr; } .u-act { justify-content: flex-start; } .search { max-width: none; } }
 .l-top .brand { display: flex; }
 .price .btn.big + .muted { margin-top: 6px; }
+.oferta { display: inline-block; background: var(--amarillo-soft); color: var(--amarillo); font-weight: 800; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; padding: 4px 10px; border-radius: 999px; }
+.p-antes { font-size: 22px; color: var(--muted); font-weight: 600; margin-right: 4px; }
+.oferta-pill { background: var(--amarillo-soft); color: var(--amarillo); }
