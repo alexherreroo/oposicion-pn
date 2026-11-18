@@ -1,0 +1,224 @@
+{%- comment -%}
+  Maestro del Temario · El Mapa de la Policía Nacional 2027
+  Sección de Shopify (sections/mapas-landing.liquid). Cifras reales a 14/11/2026:
+  262 mapas · 45 temas (Jurídicas 150/26 · Sociales 64/11 · Técnico-Científicas 48/8), mínimo 5 mapas por tema.
+  18/11/2026: añadido el Planificador Policía Nacional (app web, acceso de por vida) en su propia sección y en los packs completos.
+{%- endcomment -%}
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[
+{"@type":"Question","name":"¿Es material oficial de la Policía Nacional?","acceptedAnswer":{"@type":"Answer","text":"No. Es material de estudio no oficial, sin relación con la Policía Nacional ni con el Ministerio del Interior. Contrasta siempre con el BOE y con la convocatoria vigente."}},
+{"@type":"Question","name":"¿Qué temas incluyen los mapas de Policía Nacional?","acceptedAnswer":{"@type":"Answer","text":"Los 45 temas del temario de la Escala Básica, cada uno con un mínimo de 5 mapas: 262 mapas en total."}},
+{"@type":"Question","name":"¿Qué es el Planificador Policía Nacional?","acceptedAnswer":{"@type":"Answer","text":"Una aplicación web para PC y móvil con la que organizas tu oposición: contador de vueltas por tema, registro de estudio, repasos, plan diario y semanal y seguimiento de las pruebas físicas. Se puede probar gratis 3 días y el acceso es de por vida con un pago único."}},
+{"@type":"Question","name":"¿Cómo recibo los archivos?","acceptedAnswer":{"@type":"Answer","text":"Tras el pago recibes un enlace de descarga de los PDF. Son de uso personal: no está permitido compartirlos ni revenderlos. Si tu compra incluye el planificador, entra en la app con la cuenta de Google del mismo email y se activa automáticamente."}},
+{"@type":"Question","name":"¿Qué contiene cada mapa?","acceptedAnswer":{"@type":"Answer","text":"Seis bloques con los datos clave y el artículo de la norma, el concepto clave, la trampa típica de examen, cómo cae en el test y cinco datos para fijar."}}]}</script>
+<style>
+.mp{--n:#12306b;--g:#f5b800;--r:#c8102e;--bg:#f4f6fb;--tx:#1b2433;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:var(--tx);line-height:1.55}
+.mp *{box-sizing:border-box}.mp a{color:var(--n)}
+.mp-w{max-width:1080px;margin:0 auto;padding:0 20px}
+.mp-hero{background:linear-gradient(160deg,#0c2150,var(--n));color:#fff;padding:64px 0 56px;text-align:center;border-bottom:6px solid var(--g)}
+.mp-hero h1{font-size:clamp(1.9rem,5vw,3.1rem);line-height:1.1;margin:0 0 14px}.mp-hero h1 span{color:var(--g)}
+.mp-hero p{max-width:640px;margin:0 auto 22px;font-size:1.1rem;opacity:.92}
+.mp-stats{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin:0 0 26px;padding:0;list-style:none}
+.mp-stats li{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);border-radius:999px;padding:6px 16px;font-weight:600;font-size:.95rem}
+.mp-btn{display:inline-block;width:100%;background:var(--r);color:#fff!important;border:0;border-radius:10px;padding:13px 18px;font-size:1rem;font-weight:700;text-align:center;text-decoration:none;cursor:pointer}
+.mp-btn:hover{filter:brightness(1.1)}.mp-btn[disabled],.mp-off{background:#9aa3b2;cursor:not-allowed}
+.mp-hero .mp-btn{width:auto;background:var(--g);color:#10204a!important;padding:14px 34px}
+.mp h2{font-size:clamp(1.5rem,3.5vw,2.1rem);color:var(--n);margin:0 0 8px;text-align:center}
+.mp-sub{text-align:center;max-width:640px;margin:0 auto 30px;color:#4a5568}
+.mp-sec{padding:54px 0}.mp-alt{background:var(--bg)}
+.mp-grid{display:grid;gap:18px;grid-template-columns:repeat(auto-fit,minmax(230px,1fr))}
+.mp-card{background:#fff;border:2px solid #dbe1ee;border-radius:16px;padding:22px;display:flex;flex-direction:column;position:relative}
+.mp-card.hl{border-color:var(--g);box-shadow:0 8px 28px rgba(18,48,107,.18)}
+.mp-badge{position:absolute;top:-13px;left:50%;transform:translateX(-50%);background:var(--g);color:#10204a;font-size:.78rem;font-weight:800;padding:4px 14px;border-radius:999px;white-space:nowrap}
+.mp-card h3{margin:0 0 2px;color:var(--n);font-size:1.25rem}.mp-meta{font-size:.88rem;color:#5b6577;margin:0 0 10px;font-weight:600}
+.mp-price{font-size:2.2rem;font-weight:800;color:var(--n);margin:4px 0 12px}
+.mp-old{font-size:1.15rem;color:#8a93a3;font-weight:700;margin-right:6px}
+.mp-card ul{padding-left:18px;margin:0 0 12px;font-size:.92rem;flex:1}.mp-card li{margin-bottom:4px}
+.mp-card li.mp-plan-li{font-weight:700;color:var(--n)}
+.mp-note{font-size:.8rem;color:#5b6577;margin:0 0 14px}.mp-save{font-size:.85rem;color:#14804a;font-weight:700;margin:-6px 0 10px}
+.mp-bonos{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
+.mp-bono{background:#fff;border-left:6px solid var(--g);border-radius:10px;padding:16px 18px}.mp-bono h3{margin:0 0 4px;font-size:1.05rem;color:var(--n)}.mp-bono p{margin:0;font-size:.92rem}
+.mp-steps{display:grid;gap:18px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));text-align:center}
+.mp-steps b{display:inline-flex;width:42px;height:42px;border-radius:50%;background:var(--n);color:#fff;align-items:center;justify-content:center;margin-bottom:8px;font-size:1.1rem}
+.mp details{background:#fff;border:1px solid #dbe1ee;border-radius:10px;padding:14px 18px;margin-bottom:10px}.mp summary{cursor:pointer;font-weight:700;color:var(--n)}.mp details p{margin:10px 0 0}
+.mp-legal{background:#fff7e0;border-left:5px solid var(--g);padding:14px 18px;border-radius:8px;font-size:.88rem;margin-top:26px}
+.mp-foot{text-align:center;font-size:.85rem;color:#5b6577;padding:24px 20px 40px}
+/* Planificador */
+.mp-plan{display:grid;grid-template-columns:1fr 1.1fr;gap:36px;align-items:center}
+.mp-plan h2{text-align:left}.mp-plan h2 span{color:var(--r)}
+.mp-plan-kicker{display:inline-block;background:var(--n);color:#fff;font-size:.78rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;padding:5px 12px;border-radius:999px;margin-bottom:10px}
+.mp-offer{display:inline-block;background:var(--g);color:#10204a;font-size:.78rem;font-weight:800;letter-spacing:.04em;text-transform:uppercase;padding:5px 12px;border-radius:999px;margin:0 0 10px 6px}
+.mp-plan-txt>p{font-size:1.05rem;color:#4a5568;margin:0 0 14px}
+.mp-plan ul{list-style:none;padding:0;margin:0 0 18px;display:grid;gap:8px}
+.mp-plan li{padding-left:28px;position:relative}.mp-plan li:before{content:"✓";position:absolute;left:0;top:0;width:20px;height:20px;border-radius:50%;background:#e2f5e8;color:#14804a;font-weight:800;font-size:.8rem;display:grid;place-items:center}
+.mp-plan .mp-price small{font-size:.95rem;color:#5b6577;font-weight:600;margin-left:6px}
+.mp-plan-cta{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-start;margin-bottom:10px}
+.mp-plan-cta>a,.mp-plan-cta>form{flex:1 1 200px}
+.mp-btn.mp-gold{background:var(--g);color:#10204a!important}
+.mp-plan-img img{width:100%;height:auto;display:block;border-radius:14px;border:1px solid #dbe1ee;box-shadow:0 18px 44px rgba(18,48,107,.18)}
+@media (max-width:820px){.mp-plan{grid-template-columns:1fr}.mp-plan-img{order:-1}}
+</style>
+
+{%- assign plan = section.settings.p_plan -%}
+{%- assign url_app = section.settings.url_app -%}
+{%- comment -%} Ahorro del Pack Completo + Planificador frente a comprar los tres bloques y el planificador por separado {%- endcomment -%}
+{%- assign suelto = 0 -%}
+{%- if section.settings.p_jur != blank -%}{%- assign suelto = suelto | plus: section.settings.p_jur.price -%}{%- endif -%}
+{%- if section.settings.p_soc != blank -%}{%- assign suelto = suelto | plus: section.settings.p_soc.price -%}{%- endif -%}
+{%- if section.settings.p_tec != blank -%}{%- assign suelto = suelto | plus: section.settings.p_tec.price -%}{%- endif -%}
+{%- if plan != blank -%}{%- assign suelto = suelto | plus: plan.price -%}{%- endif -%}
+
+<div class="mp" data-opo-panel="pn" id="policia-nacional">
+  <header class="mp-hero"><div class="mp-w">
+    <h1>El Mapa de la <span>Policía Nacional</span> 2027</h1>
+    <p>El temario de la Escala Básica en mapas visuales y un planificador para organizar tus vueltas: en cada mapa, el artículo clave, la trampa típica de examen y cómo cae en el test.</p>
+    <ul class="mp-stats"><li>262 mapas</li><li>45 temas</li><li>Planificador de estudio</li><li>PDF · descarga inmediata</li></ul>
+    <a class="mp-btn" href="#packs">Ver packs y precios</a> <a class="mp-btn" style="background:transparent;border:2px solid #FFC93C;color:#FFC93C!important;margin-left:8px" href="#planificador">Planificador</a> <a class="mp-btn" style="background:transparent;border:2px solid #FFC93C;color:#FFC93C!important;margin-left:8px" href="/pages/mapas-gratis-policia-nacional">12 mapas gratis</a>  <a class="mp-btn" style="background:transparent;border:2px solid #FFC93C;color:#FFC93C!important;margin-left:8px" href="/pages/simulacro-gratis-policia-nacional">Simulacro gratis</a>
+  </div></header>
+  <section class="mp-sec"><div class="mp-w rv"><div class="mp-trust">
+    <div><b>262</b>mapas visuales</div><div><b>45</b>temas del temario</div><div><b>BOE</b>fuente de cada dato</div><div><b>PDF</b>descarga inmediata</div>
+  </div></div></section>
+
+  {%- if plan != blank -%}
+  <section class="mp-sec mp-alt" id="planificador"><div class="mp-w"><div class="mp-plan">
+    <div class="mp-plan-txt rv">
+      <span class="mp-plan-kicker">Nuevo · App de estudio</span>{%- if plan.compare_at_price > plan.price -%}<span class="mp-offer">Oferta de lanzamiento</span>{%- endif -%}
+      <h2>Planificador <span>Policía Nacional</span></h2>
+      <p>Organiza tu oposición y da vueltas al temario sin perder el hilo. En el ordenador y en el móvil, sincronizado.</p>
+      <ul>
+        <li>Los 45 temas ordenados y clasificados: No lo sé, Flojo, Bien o Dominado.</li>
+        <li>Contador de vueltas por tema y fecha objetivo para cerrar cada vuelta.</li>
+        <li>Registro de estudio con minutos y nota de por dónde te quedaste.</li>
+        <li>Repasos cuando tú decidas y plan automático diario, semanal y mensual.</li>
+        <li>Seguimiento de las pruebas físicas con nota orientativa.</li>
+      </ul>
+      <div class="mp-price">{%- if plan.compare_at_price > plan.price -%}<s class="mp-old">{{ plan.compare_at_price | money }}</s>{%- endif -%}{{ plan.price | money }}<small>acceso de por vida</small></div>
+      <div class="mp-plan-cta">
+        {%- if url_app != blank -%}<a class="mp-btn mp-gold" href="{{ url_app }}" target="_blank" rel="noopener">Probar gratis 3 días</a>{%- endif -%}
+        {%- form 'product', plan -%}
+          <input type="hidden" name="id" value="{{ plan.selected_or_first_available_variant.id }}">
+          <input type="hidden" name="return_to" value="/checkout">
+          {%- if plan.available -%}{% render 'consentimiento-digital', modo: 'producto' %}{%- endif -%}
+          <button type="submit" class="mp-btn"{% unless plan.available %} disabled{% endunless %}>{% if plan.available %}Comprar · {{ plan.price | money }}{% else %}No disponible{% endif %}</button>
+        {%- endform -%}
+      </div>
+      <p class="mp-note">Prueba sin tarjeta, entrando con tu cuenta de Google. Pago único, sin suscripción. También viene incluido en el <a href="#packs">Pack Completo y en el pack con bonos</a>.</p>
+    </div>
+    {%- if plan.featured_image -%}<div class="mp-plan-img rv"><img src="{{ plan.featured_image | image_url: width: 1200 }}" alt="Pantalla del Planificador Policía Nacional con el plan del día" width="1200" height="{{ 1200 | divided_by: plan.featured_image.aspect_ratio | round }}" loading="lazy"></div>{%- endif -%}
+  </div></div></section>
+  {%- endif -%}
+
+  <section class="mp-sec" id="packs"><div class="mp-w">
+    <h2 class="rv">Elige tu pack</h2>
+    <p class="mp-sub">Por bloque del temario, o completo con el planificador de estudio incluido. Pago único, sin suscripción.</p>
+    <div class="mp-grid">
+    {%- assign keys = 'jur,soc,tec,full,bonos' | split: ',' -%}
+    {%- for k in keys -%}
+      {%- assign hl = false -%}{%- assign badge = '' -%}{%- assign save = '' -%}
+      {%- case k -%}
+        {%- when 'jur' -%}
+          {%- assign prod = section.settings.p_jur -%}{%- assign nm = 'Pack Jurídicas' -%}{%- assign meta = 'Temas 1 a 26 · 150 mapas' -%}{%- assign fb = '5 €' -%}
+          {%- assign feat = 'Derecho Civil, nacionalidad y Constitución|Tribunal Europeo de Derechos Humanos|Administración, Interior y Dirección General de la Policía|LO 2/1986 y Policía Judicial|Extranjería y protección internacional|Seguridad privada y ciudadana|Derecho Penal y Procesal Penal|Estatuto de la víctima, igualdad y prevención de riesgos' -%}
+          {%- assign note = '26 temas con mapas (entre 5 y 9 mapas por tema).' -%}
+        {%- when 'soc' -%}
+          {%- assign prod = section.settings.p_soc -%}{%- assign nm = 'Pack Sociales' -%}{%- assign meta = 'Temas 27 a 37 · 64 mapas' -%}{%- assign fb = '5 €' -%}
+          {%- assign feat = 'Derechos humanos|Globalización|Principios éticos y delitos de odio|Inmigración y geografía humana|Seguridad, delincuencia y drogodependencias|Desarrollo sostenible y ortografía' -%}
+          {%- assign note = '11 temas con mapas (5 a 7 mapas por tema).' -%}
+        {%- when 'tec' -%}
+          {%- assign prod = section.settings.p_tec -%}{%- assign nm = 'Pack Técnico-Científicas' -%}{%- assign meta = 'Temas 38 a 45 · 48 mapas' -%}{%- assign fb = '5 €' -%}
+          {%- assign feat = 'Almacenamiento y copias de seguridad|Redes informáticas|Inteligencia y fuentes abiertas|Ciberdelincuencia|Armas de fuego|Vehículo prioritario y conducción|PRL en seguridad vial' -%}
+          {%- assign note = '8 temas con mapas (5 a 7 mapas por tema).' -%}
+        {%- when 'full' -%}
+          {%- assign prod = section.settings.p_full -%}{%- assign nm = 'Pack Completo + Planificador' -%}{%- assign meta = '262 mapas · 45 temas · app de estudio' -%}{%- assign fb = '15 €' -%}
+          {%- assign feat = 'Jurídicas + Sociales + Técnico-Científicas|Todos los mapas en PDF por tema|Cada mapa con artículo, trampa y test|★ Planificador Policía Nacional de por vida' -%}
+          {%- assign note = 'Incluye los tres bloques y el planificador.' -%}
+          {%- if prod != blank and suelto > prod.price -%}{%- assign ahorro = suelto | minus: prod.price | money -%}{%- assign save = 'Ahorras ' | append: ahorro | append: ' frente a comprarlo por separado' -%}{%- endif -%}
+        {%- when 'bonos' -%}
+          {%- assign prod = section.settings.p_bonos -%}{%- assign nm = 'Completo + 4 Bonos + Planificador' -%}{%- assign meta = '262 mapas + práctica + app de estudio' -%}{%- assign fb = '20 €' -%}
+          {%- assign feat = 'Todo el Pack Completo|Bono 1 · Simulacro de 100 preguntas|Bono 2 · Banco de 262 preguntas|Bono 3 · Chuleta de 1.310 datos|Bono 4 · Novedades legales 2025-2026|★ Planificador Policía Nacional de por vida' -%}
+          {%- assign note = 'Los bonos solo se venden dentro de este pack.' -%}{%- assign hl = true -%}{%- assign badge = 'Recomendado' -%}
+      {%- endcase -%}
+      {%- if k == 'full' -%}{%- assign hl = false -%}{%- endif -%}
+      <div class="mp-card rv{% if hl %} hl{% endif %}" style="--d:{{ forloop.index0 | times: 0.07 }}s">
+        {%- if badge != '' -%}<span class="mp-badge">{{ badge }}</span>{%- endif -%}
+        <h3>{{ nm }}</h3><p class="mp-meta">{{ meta }}</p>
+        <div class="mp-price">{%- if prod != blank -%}{%- if prod.compare_at_price > prod.price -%}<s class="mp-old">{{ prod.compare_at_price | money }}</s>{%- endif -%}{{ prod.price | money }}{%- else -%}{{ fb }}{%- endif -%}</div>
+        {%- if save != '' -%}<p class="mp-save">{{ save }}</p>{%- endif -%}
+        <ul>{%- assign items = feat | split: '|' -%}{%- for i in items -%}{%- if i contains '★' -%}<li class="mp-plan-li">{{ i | remove: '★ ' }}</li>{%- else -%}<li>{{ i }}</li>{%- endif -%}{%- endfor -%}</ul>
+        <p class="mp-note">{{ note }}</p>
+        {%- if prod != blank -%}
+          {%- form 'product', prod -%}
+            <input type="hidden" name="id" value="{{ prod.selected_or_first_available_variant.id }}">
+            <input type="hidden" name="return_to" value="/checkout">
+            {%- if prod.available -%}{% render 'consentimiento-digital', modo: 'producto' %}{%- endif -%}
+            <button type="submit" class="mp-btn"{% unless prod.available %} disabled{% endunless %}>{% if prod.available %}Comprar ahora{% else %}No disponible{% endif %}</button>
+          {%- endform -%}
+        {%- else -%}<span class="mp-btn mp-off">Asigna el producto en el editor</span>{%- endif -%}
+        {%- if prod != blank -%}<a class="mp-view" href="{{ prod.url }}">Ver producto →</a>{%- endif -%}
+      </div>
+    {%- endfor -%}
+    </div>
+  </div></section>
+
+  <section class="mp-sec mp-alt"><div class="mp-w">
+    <h2 class="rv">Los 4 bonos de práctica</h2>
+    <p class="mp-sub">Incluidos en el pack Completo + 4 Bonos + Planificador. Cada solución cita la norma y el artículo.</p>
+    <div class="mp-bonos">
+      <div class="mp-bono rv"><h3>Bono 1 · Simulacro</h3><p>100 preguntas, 3 opciones, 50 minutos y penalización −1/2, con solucionario comentado y tabla de nota.</p></div>
+      <div class="mp-bono rv"><h3>Bono 2 · Banco de preguntas</h3><p>262 preguntas del temario (una por mapa), con respuesta, fuente y trampa típica.</p></div>
+      <div class="mp-bono rv"><h3>Bono 3 · Chuleta</h3><p>1.310 datos clave para repasar rápido: cifras, plazos y órganos.</p></div>
+      <div class="mp-bono rv"><h3>Bono 4 · Novedades legales</h3><p>6 cambios normativos 2025-2026 con su referencia oficial: qué decía antes, qué dice ahora y la trampa típica.</p></div>
+    </div>
+  </div></section>
+
+  <section class="mp-sec"><div class="mp-w">
+    <h2 class="rv">Qué hay dentro de cada mapa</h2><p class="mp-sub rv">Una página A4 por mapa, con la misma estructura para que estudies más rápido.</p>
+    <div class="mp-anat">
+      <div class="rv" style="--c:#12306b"><b>🗺️ Seis bloques</b><span>Los datos clave del tema, ordenados y con el artículo de la norma.</span></div>
+      <div class="rv" style="--c:#b8860b;--d:.05s"><b>💡 Concepto clave</b><span>La idea que más cae, en una frase.</span></div>
+      <div class="rv" style="--c:#c8102e;--d:.1s"><b>⚠️ ¡Ojo con la trampa!</b><span>El matiz con el que te intentan confundir en el examen.</span></div>
+      <div class="rv" style="--c:#1e5fbf;--d:.15s"><b>📝 Cómo cae en el test</b><span>Una pregunta tipo con su respuesta y el artículo.</span></div>
+      <div class="rv" style="--c:#14804a;--d:.2s"><b>🎯 Para fijar</b><span>Cinco datos para repasar de un vistazo.</span></div>
+    </div>
+  </div></section>
+  <section class="mp-sec mp-alt"><div class="mp-w">
+    <h2 class="rv">Cómo funciona</h2><p class="mp-sub">Sin esperas ni envíos.</p>
+    <div class="mp-steps">
+      <div><b>1</b><p><strong>Elige tu pack</strong><br>Por bloque, completo o con bonos.</p></div>
+      <div><b>2</b><p><strong>Paga de forma segura</strong><br>Checkout de Shopify.</p></div>
+      <div><b>3</b><p><strong>Descarga tus PDFs</strong><br>Enlace de descarga tras el pago.</p></div>
+      <div><b>4</b><p><strong>Activa el planificador</strong><br>Entra en la app con el email de tu compra: se activa solo.</p></div>
+    </div>
+  </div></section>
+
+  <section class="mp-sec"><div class="mp-w" style="max-width:780px">
+    <h2>Preguntas frecuentes</h2><p class="mp-sub"></p>
+    <details><summary>¿Es material oficial?</summary><p>No. Es material de estudio no oficial, sin relación con la Policía Nacional ni con el Ministerio del Interior. Contrasta siempre con el BOE y con la convocatoria vigente.</p></details>
+    <details><summary>¿Qué temas incluye?</summary><p>Incluye los 45 temas del temario de la Escala Básica, cada uno con un mínimo de 5 mapas. Comprueba siempre el temario de tu convocatoria.</p></details>
+    <details><summary>¿Qué es el Planificador Policía Nacional?</summary><p>Una aplicación web para ordenador y móvil con la que organizas tu oposición: contador de vueltas por tema, registro de estudio con «por dónde te quedaste», repasos cuando tú decidas, plan diario y semanal y seguimiento de las pruebas físicas. Puedes probarla gratis 3 días{% if url_app != blank %} <a href="{{ url_app }}" target="_blank" rel="noopener">desde aquí</a>{% endif %}, y el acceso es de por vida con un pago único.</p></details>
+    <details><summary>¿Cómo activo el planificador si compro un pack?</summary><p>Entra en la app con tu cuenta de Google usando el mismo email de la compra: el acceso de por vida se activa automáticamente en unos segundos. Si compraste con otro email, escríbenos y lo activamos.</p></details>
+    <details><summary>¿Está actualizado?</summary><p>Revisado el 02/11/2026. Las novedades legales 2025-2026 se detallan en el Bono 4. La norma puede cambiar antes del examen: comprueba el texto consolidado en boe.es.</p></details>
+    <details><summary>¿Cuántos mapas tiene cada tema?</summary><p>Entre 5 y 9 mapas por tema. En total son 262 mapas en 45 temas.</p></details>
+    <details><summary>¿Qué son los «mapa 0xx» que citan los bonos?</summary><p>Es la numeración interna del temario. Los PDFs no la imprimen y algunos mapas citados no están en esta edición: guíate por el tema y el título de la norma.</p></details>
+    <details><summary>¿Cómo recibo los archivos?</summary><p>Tras el pago recibes un enlace de descarga de los PDF. Son de uso personal: no está permitido compartirlos ni revenderlos.</p></details>
+    <details><summary>¿Puedo pedir la devolución?</summary><p>Es contenido digital de descarga inmediata; se aplica lo indicado en las <a href="/policies/refund-policy">condiciones de venta</a>.</p></details>
+    <p class="mp-legal"><strong>Aviso:</strong> el material no garantiza aprobar la oposición. Las preguntas y ejercicios son de elaboración propia y no proceden de exámenes oficiales.</p>
+  </div></section>
+</div>
+
+{% schema %}
+{
+  "name": "Mapas · Landing",
+  "settings": [
+    {"type": "paragraph", "content": "Asigna cada producto. El precio se lee de Shopify: cámbialo en el producto, no aquí."},
+    {"type": "product", "id": "p_jur", "label": "Pack Jurídicas"},
+    {"type": "product", "id": "p_soc", "label": "Pack Sociales"},
+    {"type": "product", "id": "p_tec", "label": "Pack Técnico-Científicas"},
+    {"type": "product", "id": "p_full", "label": "Pack Completo + Planificador"},
+    {"type": "product", "id": "p_bonos", "label": "Completo + 4 Bonos + Planificador"},
+    {"type": "header", "content": "Planificador"},
+    {"type": "product", "id": "p_plan", "label": "Planificador Policía Nacional (acceso de por vida)"},
+    {"type": "url", "id": "url_app", "label": "Enlace a la app (prueba gratis)"}
+  ],
+  "presets": [{"name": "Mapas · Landing"}]
+}
+{% endschema %}

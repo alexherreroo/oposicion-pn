@@ -1,0 +1,123 @@
+{
+  "sections": {
+    "selector": {
+      "type": "opo-selector",
+      "settings": {
+        "kicker": "OpoMapas · Temario de oposiciones en mapas",
+        "heading": "Tu oposición, en <span>mapas</span>",
+        "subheading": "<p>Cada tema del temario oficial en mapas visuales: el artículo clave, la trampa típica de examen y cómo cae en el test. Elige tu oposición:</p>",
+        "pn_title": "Policía Nacional",
+        "pn_text": "Escala Básica · 262 mapas de 45 temas + planificador de estudio",
+        "pn_status": "Disponible",
+        "gc_title": "Guardia Civil",
+        "gc_text": "Escala de Cabos y Guardias · 215 mapas de 22 temas",
+        "gc_status": "Disponible"
+      }
+    },
+    "landing": {
+      "type": "mapas-landing",
+      "settings": {
+        "p_jur": "pack-juridicas",
+        "p_soc": "pack-sociales",
+        "p_tec": "pack-tecnico-cientificas",
+        "p_full": "pack-completo",
+        "p_bonos": "pack-completo-bonos",
+        "p_plan": "planificador-policia-nacional-acceso-de-por-vida",
+        "url_app": "https://alexherreroo.github.io/oposicion-pn/"
+      }
+    },
+    "1794749994becb963a": {
+      "type": "_blocks",
+      "settings": {}
+    },
+    "gc": {
+      "type": "gc-landing",
+      "blocks": {
+        "p1": {
+          "type": "pack",
+          "settings": {
+            "title": "Pack 1 · Seguridad y Guardia Civil",
+            "meta": "Temas 13 a 15 · 29 mapas",
+            "items": "Seguridad ciudadana y seguridad privada|Ministerios del Interior y de Defensa|Fuerzas y Cuerpos de Seguridad (LO 2/1986)|Personal, estructura e historia de la Guardia Civil",
+            "product": "pack-1-seguridad-y-guardia-civil-el-mapa-de-la-guardia-civil-2027",
+            "status": "Listo · próximamente",
+            "soon_label": "Próximamente",
+            "highlight": false
+          }
+        },
+        "p2": {
+          "type": "pack",
+          "settings": {
+            "title": "Pack 2 · Jurídicas I",
+            "meta": "Temas 4, 7, 8 y 9 · 69 mapas",
+            "items": "Constitución y Defensor del Pueblo|Código Civil|Código Penal|Derecho procesal penal",
+            "product": "pack-2-juridicas-i-el-mapa-de-la-guardia-civil-2027",
+            "status": "En preparación",
+            "soon_label": "Próximamente",
+            "highlight": false
+          }
+        },
+        "p3": {
+          "type": "pack",
+          "settings": {
+            "title": "Pack 3 · Jurídicas II",
+            "meta": "Temas 1 a 3, 5, 6 y 10 a 12 · 67 mapas",
+            "items": "Derechos humanos e igualdad|Prevención de riesgos laborales|Unión Europea e instituciones internacionales|Administrativo, protección de datos y extranjería",
+            "product": "pack-3-juridicas-ii-el-mapa-de-la-guardia-civil-2027",
+            "status": "En preparación",
+            "soon_label": "Próximamente",
+            "highlight": false
+          }
+        },
+        "p4": {
+          "type": "pack",
+          "settings": {
+            "title": "Pack 4 · Técnicas",
+            "meta": "Temas 16 a 22 · 50 mapas",
+            "items": "Protección civil y sostenibilidad|TIC, ciberseguridad y topografía|Deontología profesional|Menores, violencia de género, armas y explosivos",
+            "product": "pack-4-tecnicas-el-mapa-de-la-guardia-civil-2027",
+            "status": "En preparación",
+            "soon_label": "Próximamente",
+            "highlight": false
+          }
+        },
+        "full": {
+          "type": "pack",
+          "settings": {
+            "title": "Pack Completo Guardia Civil",
+            "meta": "Todo el temario · los 4 packs",
+            "items": "Los 22 temas con mapas|Precio rebajado frente a los packs sueltos|Serás de los primeros en recibir el nuevo material en cuanto esté preparado",
+            "product": "pack-completo-el-mapa-de-la-guardia-civil-2027",
+            "status": "En preparación",
+            "soon_label": "Próximamente",
+            "highlight": true
+          }
+        }
+      },
+      "block_order": [
+        "p1",
+        "p2",
+        "p3",
+        "p4",
+        "full"
+      ],
+      "settings": {
+        "heading": "El Mapa de la <span>Guardia Civil</span> 2027",
+        "text": "El temario oficial de la Escala de Cabos y Guardias en mapas visuales: el artículo clave, la trampa típica de examen y cómo cae en el test.",
+        "stats": "215 mapas · 22 temas|Leyes al día con el BOE|PDF · descarga inmediata",
+        "tests_url": "/pages/tests-gratis",
+        "tests_label": "Tests gratis",
+        "follow_url": "",
+        "follow_label": "Síguenos en TikTok",
+        "packs_heading": "Packs de Guardia Civil",
+        "packs_text": "Los 22 temas con mapas, en 4 packs o todo junto en el Pack Completo. Pago único, sin suscripción."
+      }
+    }
+  },
+  "order": [
+    "selector",
+    "landing",
+    "1794749994becb963a",
+    "gc"
+  ]
+}
