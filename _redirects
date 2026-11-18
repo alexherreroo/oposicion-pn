@@ -1,0 +1,6 @@
+# Cloudflare Pages: archivos internos del proyecto que no deben verse en la web.
+/shopify-worker/* / 302
+/tema-tienda/* / 302
+/VENDER.md / 302
+/LEEME.md / 302
+/firestore.rules / 302

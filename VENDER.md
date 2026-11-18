@@ -30,7 +30,7 @@ En GitHub: abre `app-config.js` → lápiz ✏️ → rellena → **Commit chang
 - `precio`, `nombre`, `eslogan`: a tu gusto. Si cambias el precio en Shopify, cámbialo aquí también.
 - `urlPago`: ya apunta a tu producto de Shopify. Solo cámbialo si borras el producto y creas otro, porque cambia el número de variante.
 
-## Paso 3 · Mover la web a un hosting que permita vender (15 min)
+## Paso 3 · Mover la web a un hosting que permita vender (15 min) ✅ hecho: https://app.opomapas.com
 
 Las normas de GitHub Pages **no permiten** usarlo para un negocio o una tienda online. Usa **Cloudflare Pages**: es gratis, permite uso comercial, no tiene límite de visitas y se actualiza solo cada vez que cambias algo en GitHub.
 

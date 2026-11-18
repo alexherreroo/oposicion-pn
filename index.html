@@ -2,6 +2,13 @@
 <html lang="es">
 <head>
   <meta charset="utf-8" />
+  <script>
+    // La app vive en app.opomapas.com: redirige desde las direcciones antiguas o técnicas.
+    (function () {
+      var h = location.hostname;
+      if (/github\.io$|pages\.dev$/.test(h)) location.replace('https://app.opomapas.com/' + location.search + location.hash);
+    })();
+  </script>
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Oposición PN</title>
   <meta name="description" content="Planificador personal de la oposición a Policía Nacional (Escala Básica)" />
