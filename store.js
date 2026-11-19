@@ -12,6 +12,8 @@ export const defaultState = () => ({
   updatedAt: 0,
   settings: {
     theme: 'auto',
+    oposicion: 'pn', // 'pn' (Policía Nacional) o 'gc' (Guardia Civil)
+    tramoEdad: 0, // Guardia Civil: 0 menos de 35, 1 de 35 a 39, 2 40 o más (marcas mínimas)
     examDate: '',
     sexo: 'H',
     diasEstudio: [0, 1, 2, 3, 4, 5],
@@ -27,6 +29,9 @@ export const defaultState = () => ({
   goals: [], // { id, period:'semana'|'mes', key, text, done }
   horas: [], // { id, date, min, note, regId? }
   fisicas: [], // { id, date, prueba, value }
+  tests: [], // { id, date, nombre, tipo, preguntas, aciertos, fallos, alternativas, escala, temaId?, fallosTemas? }
+  tarjetas: {}, // repaso rápido: { [idTarjeta]: { ok, ko, last } }
+  archivo: {}, // datos de la otra oposición mientras no está activa: { pn: {...}, gc: {...} }
 });
 
 function normalize(s) {
@@ -48,7 +53,7 @@ const listeners = new Set();
 
 export const cloud = { enabled, user: null, status: enabled ? 'cargando' : 'local', error: '' };
 // estado: cargando | sin-sesion | prueba | pago | admin | caducada | local
-export const acceso = { estado: enabled ? 'cargando' : 'local', finPrueba: null, esAdmin: false, licencia: false, tieneMapas: false };
+export const acceso = { estado: enabled ? 'cargando' : 'local', finPrueba: null, esAdmin: false, licencia: false, tieneMapas: false, tieneMapasGC: false };
 export const permitido = () => ['prueba', 'pago', 'admin', 'local'].includes(acceso.estado);
 
 // Solo para ver pantallas sin Firebase durante el desarrollo: ?demo=landing|caducada|prueba|admin
@@ -57,7 +62,7 @@ if (!enabled) {
   if (demo) {
     acceso.estado = demo === 'landing' ? 'sin-sesion' : demo;
     acceso.esAdmin = demo === 'admin';
-    acceso.tieneMapas = new URLSearchParams(location.search).has('mapas');
+    acceso.tieneMapas = acceso.tieneMapasGC = new URLSearchParams(location.search).has('mapas');
     acceso.finPrueba = Date.now() + (parseFloat(new URLSearchParams(location.search).get('quedan')) || 2.3) * DIA;
     cloud.user = demo === 'landing' ? null : { uid: 'demo', name: 'Persona Demo', email: 'demo@ejemplo.com' };
   }
@@ -104,7 +109,7 @@ function pushRemote() {
 }
 
 function guardarAcceso(uid) {
-  try { localStorage.setItem('pn-acceso:' + uid, JSON.stringify({ finPrueba: acceso.finPrueba, esAdmin: acceso.esAdmin, licencia: acceso.licencia, tieneMapas: acceso.tieneMapas })); } catch {}
+  try { localStorage.setItem('pn-acceso:' + uid, JSON.stringify({ finPrueba: acceso.finPrueba, esAdmin: acceso.esAdmin, licencia: acceso.licencia, tieneMapas: acceso.tieneMapas, tieneMapasGC: acceso.tieneMapasGC })); } catch {}
 }
 function cargarAccesoGuardado(uid) {
   try { return JSON.parse(localStorage.getItem('pn-acceso:' + uid) || 'null'); } catch { return null; }
@@ -189,7 +194,7 @@ export async function initCloud() {
     auth.onAuthStateChanged(fb.auth, (user) => {
       [unsubDoc, unsubLic].forEach((f) => f && f());
       unsubDoc = unsubLic = null;
-      Object.assign(acceso, { finPrueba: null, esAdmin: false, licencia: false, tieneMapas: false });
+      Object.assign(acceso, { finPrueba: null, esAdmin: false, licencia: false, tieneMapas: false, tieneMapasGC: false });
       try { user ? localStorage.setItem('pn-sesion', '1') : localStorage.removeItem('pn-sesion'); } catch {}
       if (!user) {
         cloud.user = null; storageKey = BASE_KEY; state = defaultState();
@@ -204,8 +209,11 @@ export async function initCloud() {
       // Si el administrador activa la licencia, se desbloquea al momento.
       unsubLic = fs.onSnapshot(fs.doc(db, 'licencias', cloud.user.email), (s) => {
         acceso.licencia = s.exists();
-        // Si compró un pack (SKU que empieza por PACK-) ya tiene los mapas: no le ofrecemos la tienda.
-        acceso.tieneMapas = (s.data()?.skus || []).some((x) => /^PACK-/i.test(x));
+        // Si compró un pack ya tiene los mapas: no le ofrecemos la tienda.
+        // SKU de Policía Nacional: PACK-…; de Guardia Civil: GC-PACK-…
+        const skus = s.data()?.skus || [];
+        acceso.tieneMapas = skus.some((x) => /^PACK-/i.test(x));
+        acceso.tieneMapasGC = skus.some((x) => /^GC-PACK-/i.test(x));
         recalcular(); notify();
       }, () => {});
       comprobarCuenta();

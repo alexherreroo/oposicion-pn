@@ -490,3 +490,62 @@ body.con-timer .page { padding-bottom: 130px; }
 .gratis { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; background: var(--surface); border: 1px solid var(--border); border-left: 5px solid #f5b800; border-radius: var(--radius); padding: 16px 18px; max-width: 760px; margin: 0 auto; }
 .gratis > div { flex: 1 1 260px; }
 .g-ico { font-size: 28px; }
+
+/* Oposición (bienvenida) */
+.opo-pick { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 16px 0 10px; }
+.opo-btn { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; text-align: left; cursor: pointer; font: inherit; color: var(--text);
+  background: var(--surface); border: 2px solid var(--border); border-radius: 14px; padding: 16px; }
+.opo-btn b { font-size: 18px; }
+.opo-btn span { font-size: 13px; color: var(--muted); }
+.opo-btn:hover, .opo-btn:focus-visible { border-color: var(--accent); background: var(--accent-soft); }
+.opo-btn.gc:hover, .opo-btn.gc:focus-visible { border-color: var(--verde); background: var(--verde-soft); }
+@media (max-width: 520px) { .opo-pick { grid-template-columns: 1fr; } }
+
+/* Tests */
+.row4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+.row4 input { width: 100%; }
+@media (max-width: 520px) { .row4 { grid-template-columns: 1fr 1fr; } }
+.test-res { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border); }
+.test-res > span { flex: 1; min-width: 180px; }
+.test-res .alt { display: flex; align-items: center; gap: 6px; }
+.test-res .alt select { width: auto; padding: 4px 8px; }
+b.bad, .bad { color: var(--rojo); }
+.k-v.good { color: var(--verde); }
+details.mt { margin-top: 14px; }
+details.mt > summary { cursor: pointer; font-weight: 600; }
+.tnum-btn { position: relative; }
+.tnum-btn sup { position: absolute; top: -6px; right: -6px; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 9px; background: var(--rojo); color: #fff; font-size: 11px; line-height: 18px; font-weight: 700; }
+.badge-n { font-size: 12px; font-weight: 700; color: var(--rojo); background: var(--rojo-soft); padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
+.btns-r { display: inline-flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.mini.fallos li { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.mini.fallos li .link { flex: 1; min-width: 160px; text-align: left; }
+
+/* Repaso rápido */
+.rr h2 { display: flex; align-items: center; gap: 6px; }
+.rr details { margin-top: 8px; }
+.rr details > summary { cursor: pointer; padding: 4px 0; }
+.rr-list { margin: 6px 0 4px; padding-left: 18px; display: grid; gap: 8px; font-size: 14px; }
+.modal.practica { max-width: 560px; }
+.progress.thin { height: 6px; margin: 4px 0 6px; }
+.pq { background: var(--surface2); border-radius: 12px; padding: 16px; margin: 8px 0 4px; }
+.pq.trampa { background: var(--rojo-soft); }
+.pq.trampa p { margin: 6px 0 0; font-size: 16px; }
+.pq-q { font-size: 17px; font-weight: 600; margin: 0 0 12px; }
+.pq-opts { display: grid; gap: 8px; }
+.pq-opt { display: flex; gap: 10px; align-items: flex-start; text-align: left; font: inherit; color: var(--text); cursor: pointer;
+  background: var(--surface); border: 2px solid var(--border); border-radius: 10px; padding: 10px 12px; }
+.pq-opt i { font-style: normal; font-weight: 700; color: var(--muted); min-width: 14px; }
+.pq-opt:hover:not([disabled]) { border-color: var(--accent); }
+.pq-opt.ok { border-color: var(--verde); background: var(--verde-soft); }
+.pq-opt.ko { border-color: var(--rojo); background: var(--rojo-soft); }
+.pq-opt.off { opacity: .55; }
+.pq-opt[disabled] { cursor: default; }
+.pq-sol { margin: 12px 0 0; font-size: 14px; font-weight: 600; }
+.pq-sol.ok { color: var(--verde); } .pq-sol.ko { color: var(--rojo); }
+.pq-fin { text-align: center; }
+.pq-fin .quick { justify-content: center; }
+
+/* Físicas: apto / no apto */
+.apto-tag { font-size: 13px; font-weight: 700; margin: 2px 0 6px; }
+.apto-tag.ok { color: var(--verde); } .apto-tag.ko { color: var(--rojo); }
+details.mt .tnum-btn.on { background: var(--rojo-soft); border-color: var(--rojo); color: var(--rojo); }

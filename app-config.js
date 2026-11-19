@@ -8,7 +8,7 @@ export default {
   nombre: 'Oposición PN',
   subtitulo: 'Escala Básica',
   // Aparece en la portada. No uses logos ni nombres que parezcan oficiales.
-  eslogan: 'Planifica tu oposición a Policía Nacional y da vueltas al temario sin perder el hilo.',
+  eslogan: 'Planifica tu oposición a Policía Nacional o Guardia Civil y da vueltas al temario sin perder el hilo.',
 
   // --- Venta ---
   precio: '9,99 €', // texto que se muestra (el cobro real lo fija el producto en Shopify)
@@ -43,6 +43,39 @@ export default {
       T: { nombre: 'Pack Técnico-Científicas', url: 'https://www.opomapas.com/products/pack-tecnico-cientificas' },
     },
   },
+  // Lo mismo para Guardia Civil (los packs de Guardia Civil tienen SKU que empieza por GC-PACK-).
+  mapasGC: {
+    gratis: 'https://www.opomapas.com/pages/mapas-gratis-guardia-civil',
+    // Páginas por tema que existen en la web (el resto enlaza a los mapas gratis).
+    temaUrl: {
+      1: 'https://www.opomapas.com/pages/guardia-civil-tema-1-derechos-humanos', 2: 'https://www.opomapas.com/pages/guardia-civil-tema-2-igualdad',
+      3: 'https://www.opomapas.com/pages/guardia-civil-tema-3-prevencion-riesgos-laborales', 4: 'https://www.opomapas.com/pages/guardia-civil-tema-4-constitucion',
+      5: 'https://www.opomapas.com/pages/guardia-civil-tema-5-derecho-union-europea', 6: 'https://www.opomapas.com/pages/guardia-civil-tema-6-instituciones-internacionales',
+      7: 'https://www.opomapas.com/pages/guardia-civil-tema-7-codigo-civil', 8: 'https://www.opomapas.com/pages/guardia-civil-tema-8-codigo-penal',
+      9: 'https://www.opomapas.com/pages/guardia-civil-tema-9-derecho-procesal-penal', 10: 'https://www.opomapas.com/pages/guardia-civil-tema-10-derecho-administrativo',
+      11: 'https://www.opomapas.com/pages/guardia-civil-tema-11-proteccion-de-datos', 12: 'https://www.opomapas.com/pages/guardia-civil-tema-12-extranjeria',
+    },
+    // Pack de cada tema.
+    packs: [
+      { temas: [13, 14, 15], nombre: 'Pack 1 · Seguridad y Guardia Civil', url: 'https://www.opomapas.com/products/pack-1-seguridad-y-guardia-civil-el-mapa-de-la-guardia-civil-2027' },
+      { temas: [4, 7, 8, 9], nombre: 'Pack 2 · Jurídicas I', url: 'https://www.opomapas.com/products/pack-2-juridicas-i-el-mapa-de-la-guardia-civil-2027' },
+      { temas: [1, 2, 3, 5, 6, 10, 11, 12], nombre: 'Pack 3 · Jurídicas II', url: 'https://www.opomapas.com/products/pack-3-juridicas-ii-el-mapa-de-la-guardia-civil-2027' },
+      { temas: [16, 17, 18, 19, 20, 21, 22], nombre: 'Pack 4 · Técnicas', url: 'https://www.opomapas.com/products/pack-4-tecnicas-el-mapa-de-la-guardia-civil-2027' },
+    ],
+    completo: { nombre: 'Pack Completo de Guardia Civil', url: 'https://www.opomapas.com/products/pack-completo-el-mapa-de-la-guardia-civil-2027' },
+  },
+
+  // --- Práctica gratis en la web (se enlaza desde la sección Tests) ---
+  practicaWeb: {
+    pn: [['Simulacro gratis de 20 preguntas', 'https://www.opomapas.com/pages/simulacro-gratis-policia-nacional'], ['Test diario gratis', 'https://www.opomapas.com/pages/tests-gratis#pn'], ['Prueba de nivel de Constitución', 'https://www.opomapas.com/pages/prueba-de-nivel-oposiciones']],
+    gc: [['Test diario gratis', 'https://www.opomapas.com/pages/tests-gratis#gc'], ['Prueba de nivel de Constitución', 'https://www.opomapas.com/pages/prueba-de-nivel-oposiciones']],
+  },
+
+  // --- Repaso rápido (preguntas y trampas de cada tema, en contenido.js) ---
+  // Si pones soloConMapas: true, quien no tenga los mapas de su oposición solo ve las primeras
+  // 'gratisPorTema' tarjetas de cada tema y una invitación a comprar el pack.
+  practica: { soloConMapas: false, gratisPorTema: 3, porSesion: 10 },
+
   // Pack que se ofrece al terminar la prueba (debe incluir el planificador: SKU con PLANIFICADOR).
   packOferta: {
     nombre: 'Pack Completo + Planificador',
