@@ -88,7 +88,7 @@ export default {
   emailSoporte: 'opomapas@gmail.com',
   titular: 'Alex Herrero Moscardo', // tu nombre completo o el de tu empresa
   nif: '20936623E',
-  domicilio: 'Calle La Reina 67', // dirección completa (exigida por la LSSI): añade código postal y localidad
+  domicilio: 'Calle La Reina 67, 46800 Valencia', // dirección completa (exigida por la LSSI)
   web: 'https://www.opomapas.com', // dirección de la web
   fechaLegal: '19 de noviembre de 2026', // fecha de última actualización de los textos legales
 };
