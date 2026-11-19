@@ -71,6 +71,12 @@ export default {
     gc: [['Test diario gratis', 'https://www.opomapas.com/pages/tests-gratis#gc'], ['Prueba de nivel de Constitución', 'https://www.opomapas.com/pages/prueba-de-nivel-oposiciones']],
   },
 
+  // --- Novedades por email ---
+  // Casilla opcional (siempre desmarcada) en la bienvenida y en Ajustes. Quien la marca queda suscrito
+  // en Shopify (lo hace el activador de Cloudflare). Si cambias el texto, se guarda el nuevo como prueba.
+  // Ponlo en activo: true cuando hayas publicado las reglas de Firestore y configurado el activador (VENDER.md, paso 7).
+  novedades: { activo: false, texto: 'Quiero recibir por email novedades, tests y ofertas de OpoMapas. Puedo darme de baja cuando quiera.' },
+
   // --- Repaso rápido (preguntas y trampas de cada tema, en contenido.js) ---
   // Si pones soloConMapas: true, quien no tenga los mapas de su oposición solo ve las primeras
   // 'gratisPorTema' tarjetas de cada tema y una invitación a comprar el pack.

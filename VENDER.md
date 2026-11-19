@@ -83,6 +83,41 @@ Crea un código de descuento del 100 % solo para ti, compra el planificador con 
 - **Textos legales**: la app trae Aviso legal, Privacidad y Términos como **plantillas**. Revísalos con tu gestor o con un abogado antes de vender.
 - **Marca**: no uses escudos, logos ni colores oficiales de la Policía Nacional ni de la Guardia Civil, ni digas que es oficial. La app ya incluye el aviso de que es independiente.
 
+
+## Paso 7 · Novedades por email (casilla opcional en la app)
+
+La app puede mostrar una casilla **desmarcada** en la bienvenida y un interruptor en *Ajustes*: "Quiero recibir por email novedades, tests y ofertas de OpoMapas". Quien la marca queda **suscrito en Shopify** (con las etiquetas `newsletter` y `app-planificador`) y quien la desmarca se da de baja. Se guarda qué aceptó y cuándo, como prueba del consentimiento. Está apagada hasta que hagas estos pasos:
+
+**7.1 · Reglas de Firestore.** En Firebase → Firestore Database → Reglas, añade este bloque justo antes de `// Documento ficticio para que la app sepa si eres administrador.` (no borres nada más; también está en `firestore.rules`) y pulsa **Publicar**:
+
+```
+    match /suscripciones/{uid} {
+      allow read: if signedIn() && (request.auth.uid == uid || isAdmin());
+      allow create, update: if signedIn() && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['email', 'estado', 'fecha', 'texto', 'origen', 'sincronizado'])
+        && request.resource.data.email == myEmail()
+        && request.resource.data.estado in ['si', 'no']
+        && request.resource.data.fecha == request.time
+        && request.resource.data.sincronizado == false;
+    }
+```
+
+**7.2 · Permiso de Shopify para gestionar clientes** (una de las dos formas):
+- **A (si tu admin lo permite):** Shopify → Configuración → Apps y canales de ventas → **Desarrollar apps** → Crear una app ("Activador planificador") → *Configurar ámbitos de la API de Admin*: marca `write_customers` y `read_customers` → Guardar → **Instalar app** → copia el **token de acceso de la API de Admin** (empieza por `shpat_`; solo se muestra una vez).
+- **B (si Shopify te manda al Dev Dashboard):** en <https://dev.shopify.com/dashboard> crea una app, en su versión marca los permisos `write_customers` y `read_customers`, publícala e **instálala en tu tienda**. En *Settings* copia el **Client ID** y el **Client secret**.
+
+**7.3 · Activador de Cloudflare.**
+1. Workers y Pages → `activador-opomapas` → **Editar código** → pega el `shopify-worker/worker.js` nuevo → **Implementar**.
+2. Configuración → Variables y secretos → Añadir:
+   - `SHOPIFY_SHOP` (texto): `d1yjv4-ts.myshopify.com`
+   - Forma A: `SHOPIFY_ADMIN_TOKEN` (secreto): el token `shpat_…`
+   - Forma B: `SHOPIFY_CLIENT_ID` y `SHOPIFY_CLIENT_SECRET` (secretos)
+3. Configuración → **Activadores (Triggers) → Cron Triggers → Añadir**: `*/15 * * * *` (cada 15 minutos).
+
+**7.4 · Encenderla.** En `app-config.js` cambia `novedades: { activo: false` por `activo: true`.
+
+Comprobación: marca la casilla en *Ajustes* con tu cuenta; en 15 minutos aparecerás en Shopify → Clientes como suscrito al marketing por email. En Firestore, el documento `suscripciones/{tu uid}` tendrá `sincronizado: true` y el `resultado`. Para enviar los correos usa **Shopify Email** filtrando por la etiqueta `app-planificador` o por "suscrito a marketing".
+
 ## Costes y límites
 
 - **Firebase gratis (plan Spark)**: unas 20.000 escrituras y 50.000 lecturas al día. Da para unos **cien o doscientos usuarios activos a diario**. Si los superas, pasa al plan **Blaze** (pago por uso). Con ese volumen suele costar céntimos o pocos euros al mes, y puedes poner una alerta de presupuesto.

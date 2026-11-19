@@ -45,6 +45,18 @@ service cloud.firestore {
       allow delete: if signedIn() && request.auth.uid == uid;
     }
 
+    // Novedades por email: la casilla opcional de la app. Cada usuario solo escribe la suya y con su
+    // propio email; queda guardado qué aceptó y cuándo. El activador de Cloudflare lo pasa a Shopify.
+    match /suscripciones/{uid} {
+      allow read: if signedIn() && (request.auth.uid == uid || isAdmin());
+      allow create, update: if signedIn() && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['email', 'estado', 'fecha', 'texto', 'origen', 'sincronizado'])
+        && request.resource.data.email == myEmail()
+        && request.resource.data.estado in ['si', 'no']
+        && request.resource.data.fecha == request.time
+        && request.resource.data.sincronizado == false;
+    }
+
     // Documento ficticio para que la app sepa si eres administrador.
     match /admin/{doc} {
       allow read: if isAdmin();
