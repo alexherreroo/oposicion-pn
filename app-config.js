@@ -86,9 +86,9 @@ export default {
 
   // --- Contacto y datos legales (obligatorios para vender en España) ---
   emailSoporte: 'opomapas@gmail.com',
-  titular: '', // tu nombre completo o el de tu empresa
-  nif: '',
-  domicilio: '', // dirección completa (exigida por la LSSI)
+  titular: 'Alex Herrero Moscardo', // tu nombre completo o el de tu empresa
+  nif: '20936623E',
+  domicilio: 'Calle La Reina 67', // dirección completa (exigida por la LSSI): añade código postal y localidad
   web: 'https://www.opomapas.com', // dirección de la web
-  fechaLegal: '17 de noviembre de 2026', // fecha de última actualización de los textos legales
+  fechaLegal: '19 de noviembre de 2026', // fecha de última actualización de los textos legales
 };
