@@ -5,8 +5,8 @@
 // =====================================================================
 export default {
   // --- Marca ---
-  nombre: 'Oposición PN',
-  subtitulo: 'Escala Básica',
+  nombre: 'Planificador OpoMapas',
+  subtitulo: 'Policía Nacional y Guardia Civil',
   // Aparece en la portada. No uses logos ni nombres que parezcan oficiales.
   eslogan: 'Planifica tu oposición a Policía Nacional o Guardia Civil y da vueltas al temario sin perder el hilo.',
 
@@ -18,7 +18,7 @@ export default {
   // Días de prueba gratis. ⚠️ Si lo cambias, cambia también el número en firestore.rules
   // (duration.value(3, 'd')) o la app y la base de datos no coincidirán.
   diasPrueba: 3,
-  // Enlace de compra. Ahora apunta al producto "Planificador Policía Nacional · Acceso de por vida"
+  // Enlace de compra. Ahora apunta al producto "Planificador de oposiciones: Policía Nacional y Guardia Civil · Acceso de por vida"
   // de tu tienda Shopify (variante 61721546948942). También sirve cualquier otra plataforma de pago.
   // Puedes usar {email} y {uid}: se sustituyen por los del usuario para que el pago
   // llegue con su email ya rellenado. Ejemplos:

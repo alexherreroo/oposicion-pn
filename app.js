@@ -1517,7 +1517,7 @@ function App() {
   const active = route === 'tema' ? 'temario' : route === 'cuenta' ? 'ajustes' : route;
   return html`<div class="shell">
     <nav class="side" aria-label="Secciones">
-      <div class="brand"><img src="icon.svg" alt="" width="28" height="28" /><div><b>${L.OPO.marca}</b><span class="muted small">${L.OPO.escala}</span></div></div>
+      <div class="brand"><img src="icon.svg" alt="" width="28" height="28" /><div><b>${CONFIG.nombre}</b><span class="muted small">${L.OPO.nombre} · ${L.OPO.escala}</span></div></div>
       ${NAV.map(([k, l]) => html`<a class=${'nav ' + (active === k ? 'on' : '')} href=${'#/' + k} aria-current=${active === k ? 'page' : null}><${Icon} n=${k} /><span>${l}</span></a>`)}
       ${acceso.esAdmin ? html`<a class=${'nav desk ' + (active === 'admin' ? 'on' : '')} href="#/admin"><${Icon} n="admin" /><span>Admin</span></a>` : null}
       <div class="side-f"><${SyncDot} /><div class="legal-links"><a href="#/legal/terminos">Términos</a> · <a href="#/legal/privacidad">Privacidad</a></div></div>

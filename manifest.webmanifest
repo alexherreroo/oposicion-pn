@@ -1,6 +1,6 @@
 {
-  "name": "Oposición PN · Planificador",
-  "short_name": "Oposición PN",
+  "name": "Planificador OpoMapas · Policía Nacional y Guardia Civil",
+  "short_name": "Planificador",
   "start_url": "./#/hoy",
   "scope": "./",
   "display": "standalone",

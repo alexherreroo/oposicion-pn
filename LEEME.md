@@ -1,4 +1,4 @@
-# Oposición PN · Planificador
+# Planificador OpoMapas · Policía Nacional y Guardia Civil
 
 > 💶 **¿Quieres venderla?** Lee **[VENDER.md](VENDER.md)**: prueba gratis de 3 días, pago único y panel de administración.
 

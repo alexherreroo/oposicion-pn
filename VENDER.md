@@ -4,7 +4,7 @@
 
 1. Alguien entra en la web de la app y ve la **portada** con precio y preguntas frecuentes.
 2. Pulsa **"Empezar prueba gratis con Google"**. Se crea su cuenta y empiezan sus **3 días de prueba** con todo desbloqueado. La fecha de inicio la pone el servidor de Google, así que no se puede trucar.
-3. Al acabar la prueba ve la **pantalla de pago**. El botón abre tu tienda **OpoMapas** con el producto *Planificador Policía Nacional · Acceso de por vida* (19,99 €) en el carrito, su email rellenado y su cuenta de la app vinculada al pedido.
+3. Al acabar la prueba ve la **pantalla de pago**. El botón abre tu tienda **OpoMapas** con el producto *Planificador de oposiciones: Policía Nacional y Guardia Civil · Acceso de por vida* en el carrito, su email rellenado y su cuenta de la app vinculada al pedido.
 4. Al pagar, Shopify avisa al **activador automático** (`shopify-worker/worker.js`, un Cloudflare Worker gratuito). Este guarda la licencia en Firebase y **la app se desbloquea sola en segundos**.
 5. Si alguien compra directamente en la tienda, sin pasar por la app, su acceso queda activado para el email del pedido. Le basta con entrar en la app con la cuenta de Google de ese email.
 6. Los **packs** que incluyan el planificador también lo activan si su SKU contiene la palabra `PLANIFICADOR`, por ejemplo `PACK-TODO-PLANIFICADOR`.
@@ -63,7 +63,7 @@ Las normas de GitHub Pages **no permiten** usarlo para un negocio o una tienda o
 4. Pulsa **Enviar notificación de prueba**. No activará a nadie, porque el pedido de prueba no lleva el planificador, pero en Cloudflare → *Registros* verás que llegó.
 
 **4.4 · Publicar el producto**
-- En Shopify → Productos → *Planificador Policía Nacional · Acceso de por vida*: revisa el texto, añade el enlace a la app en la descripción y pon el estado en **Activo**, con el canal **Tienda online** marcado.
+- En Shopify → Productos → *Planificador de oposiciones: Policía Nacional y Guardia Civil · Acceso de por vida*: revisa el texto, añade el enlace a la app en la descripción y pon el estado en **Activo**, con el canal **Tienda online** marcado.
 - **Pack con todo:** crea el producto o variante con el precio que quieras y pon un **SKU que contenga `PLANIFICADOR`**, por ejemplo `PACK-TODO-PLANIFICADOR`. Para entregar también los PDF de los mapas, adjúntalos como en tus otros packs.
 
 **4.5 · Prueba real**
@@ -81,7 +81,7 @@ Crea un código de descuento del 100 % solo para ti, compra el planificador con 
 - **Alta como autónomo** (modelo 036/037 en Hacienda y RETA en la Seguridad Social) si la venta es habitual. Pregunta a un gestor por tu caso concreto.
 - **IVA**: vendiendo en Shopify **tú** eres el vendedor y declaras el IVA, como ya haces con los mapas. Por debajo de 10.000 €/año de ventas a otros países de la UE aplicas el IVA español. Configura los impuestos en Shopify → *Impuestos y aranceles*.
 - **Textos legales**: la app trae Aviso legal, Privacidad y Términos como **plantillas**. Revísalos con tu gestor o con un abogado antes de vender.
-- **Marca**: no uses escudos, logos ni colores oficiales de la Policía Nacional, ni digas que es oficial. La app ya incluye el aviso de que es independiente.
+- **Marca**: no uses escudos, logos ni colores oficiales de la Policía Nacional ni de la Guardia Civil, ni digas que es oficial. La app ya incluye el aviso de que es independiente.
 
 ## Costes y límites
 
