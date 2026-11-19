@@ -1,4 +1,4 @@
-# Oposición PN · Planificador
+# Planificador OpoMapas · Policía Nacional y Guardia Civil
 
 > 💶 **¿Quieres venderla?** Lee **[VENDER.md](VENDER.md)**: prueba gratis de 3 días, pago único y panel de administración.
 
@@ -50,6 +50,14 @@ Ya puedes usarla. De momento está en **modo local**: los datos se guardan solo 
 - **iPhone (Safari):** abre la web → botón compartir → **Añadir a pantalla de inicio**.
 
 Funciona sin conexión: los cambios se guardan y se sincronizan al volver internet.
+
+## Novedades: Guardia Civil, tests y repaso rápido
+
+- **Dos oposiciones.** Al empezar se elige **Policía Nacional** (45 temas) o **Guardia Civil** (22 temas). Se puede cambiar en *Ajustes → Oposición*: los datos de cada una (temas, plan, tests, físicas) se guardan por separado. El temario, el examen y las pruebas físicas de cada oposición están en `oposiciones.js`.
+- **Tests y simulacros** (sección *Tests*). Se apunta cada test con aciertos y fallos y la app calcula la nota con la fórmula de la convocatoria: Policía Nacional sobre 10, con 3 opciones (cada fallo resta 1/2); Guardia Civil sobre 100, con 4 opciones (cada fallo resta 1/3). También muestra la evolución y los temas en los que más fallas, con botones para repasarlos.
+- **Repaso rápido** en cada tema: preguntas tipo test y trampas de examen sacadas de opomapas.com (`contenido.js`). Cuenta como un repaso y mejora la estimación del tema. Para añadir preguntas, edita `contenido.js`: al principio del archivo se explica el formato. En `app-config.js → practica` puedes limitar las tarjetas a quien tenga los mapas (`soloConMapas: true`).
+- **Físicas de Guardia Civil:** apto o no apto según las marcas mínimas por sexo y edad (BOE-A-2026-9982).
+- **Mapas de Guardia Civil:** los enlaces están en `app-config.js → mapasGC`. Si alguien compra el planificador junto con un pack de Guardia Civil (SKU que empieza por `GC-PACK-`), la app deja de ofrecerle la tienda.
 
 ---
 

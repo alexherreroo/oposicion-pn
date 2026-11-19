@@ -1,12 +1,12 @@
 // Funciones para que la prueba enganche: ritmo, cifras, logros, confeti, temporizador e imagen para compartir.
 import * as L from './logic.js';
 
-const { TEMAS, today, addDays, diffDays } = L;
+const { today, addDays, diffDays } = L;
 const regsReales = (t) => (t?.regs || []).filter((r) => !r.importado);
 
 // ---------- Racha y cifras ----------
 export function diasActivos(s) {
-  return new Set([...s.horas.map((h) => h.date), ...Object.values(s.temas).flatMap((t) => regsReales(t).map((r) => r.date))]);
+  return new Set([...s.horas.map((h) => h.date), ...(s.tests || []).map((t) => t.date), ...Object.values(s.temas).flatMap((t) => regsReales(t).map((r) => r.date))]);
 }
 export function racha(s) {
   const dias = diasActivos(s);
@@ -31,7 +31,8 @@ export function cifras(s) {
     temas: new Set(regs.map((r) => r.temaId)).size,
     vueltas: regs.filter((r) => r.tipo === 'vuelta').length,
     sesiones: regs.filter((r) => r.tipo === 'estudio').length,
-    repasos: regs.filter((r) => r.tipo === 'repaso').length,
+    repasos: regs.filter((r) => r.tipo === 'repaso' || r.tipo === 'practica').length,
+    tests: (s.tests || []).length,
     dias: diasActivos(s).size,
     tareasFuturas: futuras.length,
     planHasta: futuras.reduce((m, k) => (k.date > m ? k.date : m), ''),
@@ -49,7 +50,7 @@ export function cifrasSemana(s, ref = today()) {
     min: s.horas.filter((h) => enSemana(h.date)).reduce((a, h) => a + h.min, 0),
     temas: new Set(regs.map((r) => r.temaId)).size,
     vueltas: regs.filter((r) => r.tipo === 'vuelta').length,
-    repasos: regs.filter((r) => r.tipo === 'repaso').length,
+    repasos: regs.filter((r) => r.tipo === 'repaso' || r.tipo === 'practica').length,
     dias: [...diasActivos(s)].filter(enSemana).length,
   };
 }
@@ -58,7 +59,7 @@ export function cifrasSemana(s, ref = today()) {
 export function ritmo(s, ref = today()) {
   const v = L.resumenVueltas(s.temas);
   const objetivo = L.objetivoVuelta(s.settings, v.actual);
-  const restantes = 45 - v.hechos;
+  const restantes = L.N_TEMAS - v.hechos;
   const reales = Object.values(s.temas).flatMap((t) => regsReales(t));
   const primera = reales.reduce((m, r) => (!m || r.date < m ? r.date : m), '');
   const recientes = reales.filter((r) => r.tipo === 'vuelta' && r.date > addDays(ref, -14));
@@ -85,8 +86,8 @@ export function ritmo(s, ref = today()) {
 export const fmtNum = (n, dec = 1) => (Math.round(n * 10 ** dec) / 10 ** dec).toString().replace('.', ',');
 
 // ---------- Logros ----------
-const conVuelta = (s) => TEMAS.filter((t) => regsReales(s.temas[t.id]).some((r) => r.tipo === 'vuelta')).length;
-const bloqueCompleto = (s, b) => TEMAS.filter((t) => t.bloque === b).every((t) => L.infoTema(s.temas[t.id]).vueltas >= 1);
+const conVuelta = (s) => L.TEMAS.filter((t) => regsReales(s.temas[t.id]).some((r) => r.tipo === 'vuelta')).length;
+const bloqueCompleto = (s, b) => L.TEMAS.filter((t) => t.bloque === b).every((t) => L.infoTema(s.temas[t.id]).vueltas >= 1);
 const minTotal = (s) => s.horas.reduce((a, h) => a + h.min, 0);
 function semanaObjetivo(s) {
   const obj = (s.settings.horasObjetivoSemana || 0) * 60;
@@ -95,19 +96,24 @@ function semanaObjetivo(s) {
   s.horas.forEach((h) => { const k = L.weekStart(h.date); porSemana[k] = (porSemana[k] || 0) + h.min; });
   return Object.values(porSemana).some((m) => m >= obj);
 }
-export const LOGROS = [
+const ICONO_BLOQUE = { J: '⚖️', S: '🌍', T: '💻' };
+const nTestsAprobados = (s) => (s.tests || []).filter((t) => L.notaTest(t) >= (t.escala >= 100 ? 50 : 5)).length;
+const logrosBloques = () => Object.entries(L.BLOQUES).map(([b, nombre]) => {
+  const n = L.TEMAS.filter((t) => t.bloque === b).length;
+  return { id: 'bloque-' + b, icon: ICONO_BLOQUE[b], titulo: `${nombre}: vuelta completa`, desc: `Una vuelta a los ${n} temas de ${nombre}`, ok: (s) => bloqueCompleto(s, b) };
+});
+// Se calculan cada vez porque dependen de la oposición (número de temas y bloques).
+export const getLogros = () => [
   { id: 'primer-paso', icon: '🚀', titulo: 'Primer paso', desc: 'Registra tu primera sesión de estudio', ok: (s) => cifras(s).actividad },
   { id: 'primera-vuelta', icon: '✅', titulo: 'Primer tema cerrado', desc: 'Completa la vuelta de un tema', ok: (s) => conVuelta(s) >= 1 },
   { id: 'primer-repaso', icon: '🔁', titulo: 'Repasar es aprobar', desc: 'Haz tu primer repaso', ok: (s) => cifras(s).repasos >= 1 },
   { id: 'temas-5', icon: '📘', titulo: '5 temas', desc: 'Completa la vuelta de 5 temas', ok: (s) => conVuelta(s) >= 5 },
   { id: 'temas-15', icon: '📚', titulo: '15 temas', desc: 'Completa la vuelta de 15 temas', ok: (s) => conVuelta(s) >= 15 },
   { id: 'temas-30', icon: '🏛️', titulo: '30 temas', desc: 'Completa la vuelta de 30 temas', ok: (s) => conVuelta(s) >= 30 },
-  { id: 'bloque-J', icon: '⚖️', titulo: 'Jurídicas dominadas', desc: 'Una vuelta a los 26 temas de Ciencias Jurídicas', ok: (s) => bloqueCompleto(s, 'J') },
-  { id: 'bloque-S', icon: '🌍', titulo: 'Sociales al día', desc: 'Una vuelta a los 11 temas de Ciencias Sociales', ok: (s) => bloqueCompleto(s, 'S') },
-  { id: 'bloque-T', icon: '💻', titulo: 'Técnico-científicas listas', desc: 'Una vuelta a los 8 temas técnico-científicos', ok: (s) => bloqueCompleto(s, 'T') },
-  { id: 'vuelta-1', icon: '🏁', titulo: '¡Primera vuelta completa!', desc: 'Los 45 temas con al menos una vuelta', ok: (s) => L.resumenVueltas(s.temas).actual > 1 },
-  { id: 'vuelta-2', icon: '🥈', titulo: 'Segunda vuelta completa', desc: 'Los 45 temas con dos vueltas', ok: (s) => L.resumenVueltas(s.temas).actual > 2 },
-  { id: 'vuelta-3', icon: '🥇', titulo: 'Tercera vuelta completa', desc: 'Los 45 temas con tres vueltas', ok: (s) => L.resumenVueltas(s.temas).actual > 3 },
+  ...logrosBloques(),
+  { id: 'vuelta-1', icon: '🏁', titulo: '¡Primera vuelta completa!', desc: `Los ${L.N_TEMAS} temas con al menos una vuelta`, ok: (s) => L.resumenVueltas(s.temas).actual > 1 },
+  { id: 'vuelta-2', icon: '🥈', titulo: 'Segunda vuelta completa', desc: `Los ${L.N_TEMAS} temas con dos vueltas`, ok: (s) => L.resumenVueltas(s.temas).actual > 2 },
+  { id: 'vuelta-3', icon: '🥇', titulo: 'Tercera vuelta completa', desc: `Los ${L.N_TEMAS} temas con tres vueltas`, ok: (s) => L.resumenVueltas(s.temas).actual > 3 },
   { id: 'racha-3', icon: '🔥', titulo: 'Racha de 3 días', desc: 'Estudia 3 días seguidos', ok: (s) => rachaMaxima(s) >= 3 },
   { id: 'racha-7', icon: '🔥', titulo: 'Una semana sin fallar', desc: 'Estudia 7 días seguidos', ok: (s) => rachaMaxima(s) >= 7 },
   { id: 'racha-14', icon: '🔥', titulo: 'Racha de 14 días', desc: 'Estudia 14 días seguidos', ok: (s) => rachaMaxima(s) >= 14 },
@@ -116,8 +122,12 @@ export const LOGROS = [
   { id: 'horas-50', icon: '⏱️', titulo: '50 horas', desc: 'Acumula 50 horas de estudio', ok: (s) => minTotal(s) >= 3000 },
   { id: 'horas-100', icon: '💯', titulo: '100 horas', desc: 'Acumula 100 horas de estudio', ok: (s) => minTotal(s) >= 6000 },
   { id: 'semana-objetivo', icon: '🎯', titulo: 'Objetivo semanal cumplido', desc: 'Llega a tus horas objetivo en una semana', ok: (s) => semanaObjetivo(s) },
+  { id: 'primer-test', icon: '📝', titulo: 'Primer test', desc: 'Registra tu primer test o simulacro', ok: (s) => (s.tests || []).length >= 1 },
+  { id: 'tests-10', icon: '🎯', titulo: '10 tests', desc: 'Registra 10 tests o simulacros', ok: (s) => (s.tests || []).length >= 10 },
+  { id: 'test-aprobado', icon: '🏅', titulo: 'Aprobado', desc: 'Saca un 5 (o 50) en un test', ok: (s) => nTestsAprobados(s) >= 1 },
+  { id: 'primer-rapido', icon: '⚡', titulo: 'Repaso rápido', desc: 'Haz tu primer repaso rápido con preguntas de un tema', ok: (s) => Object.values(s.temas).some((t) => (t.regs || []).some((r) => r.tipo === 'practica')) },
 ];
-export const logrosConseguidos = (s) => LOGROS.filter((l) => { try { return l.ok(s); } catch { return false; } }).map((l) => l.id);
+export const logrosConseguidos = (s) => getLogros().filter((l) => { try { return l.ok(s); } catch { return false; } }).map((l) => l.id);
 
 // ---------- Confeti y sonido ----------
 export function confeti(n = 140) {
@@ -211,7 +221,7 @@ export function dibujarSemana(canvas, s, { marca, web }) {
   const F = 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
   const txt = (t, x, y, size, col = '#fff', weight = 700, align = 'left') => { ctx.font = `${weight} ${size}px ${F}`; ctx.fillStyle = col; ctx.textAlign = align; ctx.fillText(t, x, y); };
   txt('MI SEMANA DE OPOSICIÓN', 80, 150, 40, '#f5b800', 800);
-  txt('Policía Nacional · Escala Básica', 80, 210, 44, '#ffffff', 700);
+  txt(`${L.OPO.nombre} · ${L.OPO.escala}`, 80, 210, 44, '#ffffff', 700);
   txt(`Del ${L.fmtCorto(sem.ini)} al ${L.fmtCorto(sem.fin)}`, 80, 265, 34, 'rgba(255,255,255,.75)', 500);
   const cajas = [
     [fmtNum(sem.min / 60), 'horas de estudio'],
@@ -228,9 +238,9 @@ export function dibujarSemana(canvas, s, { marca, web }) {
   });
   const by = 1060;
   txt(`Vuelta ${v.actual} al temario`, 80, by, 38, '#fff', 700);
-  txt(`${v.hechos}/45 temas`, W - 80, by, 38, '#f5b800', 800, 'right');
+  txt(`${v.hechos}/${L.N_TEMAS} temas`, W - 80, by, 38, '#f5b800', 800, 'right');
   ctx.fillStyle = 'rgba(255,255,255,.15)'; ctx.fillRect(80, by + 30, W - 160, 26);
-  ctx.fillStyle = '#f5b800'; ctx.fillRect(80, by + 30, ((W - 160) * v.hechos) / 45, 26);
+  ctx.fillStyle = '#f5b800'; ctx.fillRect(80, by + 30, ((W - 160) * v.hechos) / L.N_TEMAS, 26);
   txt(marca, 80, 1250, 36, '#ffffff', 800);
   txt(web, W - 80, 1250, 32, 'rgba(255,255,255,.8)', 600, 'right');
   return canvas;

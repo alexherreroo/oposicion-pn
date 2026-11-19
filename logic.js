@@ -1,35 +1,21 @@
 // Lógica pura: temario, fechas, repetición espaciada, dominio, baremo y autoplanificación.
 
-export const BLOQUES = {
-  J: 'Ciencias Jurídicas',
-  S: 'Ciencias Sociales',
-  T: 'Materias Técnico-científicas',
-};
+import { OPOSICIONES } from './oposiciones.js';
 
-// Títulos abreviados de los 45 temas (programa Escala Básica; revisa las bases de tu convocatoria).
-const T = [
-  'Derecho y persona jurídica', 'Constitución Española (I)', 'Constitución Española (II)',
-  'Unión Europea y cooperación policial internacional', 'Administración General del Estado',
-  'Funcionarios públicos', 'Ministerio del Interior y Secretaría de Estado de Seguridad',
-  'Dirección General de la Policía y Policía Nacional', 'LO 2/1986, de Fuerzas y Cuerpos de Seguridad',
-  'Entrada y residencia de extranjeros', 'Infracciones en materia de extranjería', 'Protección internacional',
-  'Seguridad privada', 'LO 4/2015, de protección de la seguridad ciudadana', 'Infraestructuras críticas y ciberseguridad',
-  'Derecho Penal: parte general', 'Delitos contra las personas', 'Delitos contra el patrimonio',
-  'Delitos contra el orden público', 'Delitos informáticos', 'Derecho Procesal Penal y detención',
-  'Estatuto de la víctima del delito', 'Igualdad y no discriminación', 'Prevención de riesgos laborales: introducción',
-  'Prevención de riesgos laborales: marco normativo', 'Protección de datos personales',
-  'Derechos Humanos', 'Globalización', 'Actitudes y valores sociales', 'Principios éticos de la sociedad actual',
-  'Inmigración', 'Geografía humana y demografía', 'La seguridad', 'Drogodependencias', 'Desarrollo sostenible',
-  'Gramática de la lengua española', 'Ortografía de la lengua española',
-  'Sistemas operativos', 'Redes informáticas', 'Inteligencia', 'Ciberdelincuencia y amenazas', 'Armas de fuego',
-  'Vehículo prioritario', 'Seguridad en la conducción de vehículos prioritarios', 'Prevención de riesgos laborales en seguridad vial',
-];
-export const TEMAS = T.map((titulo, i) => ({
-  id: i + 1,
-  titulo,
-  bloque: i < 26 ? 'J' : i < 37 ? 'S' : 'T',
-}));
-export const N_TEMAS = TEMAS.length;
+// La oposición activa (Policía Nacional o Guardia Civil). Son "live bindings": quien importe
+// el módulo entero (import * as L) ve siempre los valores actuales tras setOposicion().
+export let OPO = OPOSICIONES.pn;
+export let BLOQUES = OPO.bloques;
+export let TEMAS = OPO.temas;
+export let N_TEMAS = TEMAS.length;
+export let PRUEBAS = OPO.fisicas.pruebas;
+export let BAREMO = OPO.fisicas.baremo;
+export function setOposicion(id) {
+  const o = OPOSICIONES[id] || OPOSICIONES.pn;
+  if (o === OPO) return;
+  OPO = o; BLOQUES = o.bloques; TEMAS = o.temas; N_TEMAS = o.temas.length;
+  PRUEBAS = o.fisicas.pruebas; BAREMO = o.fisicas.baremo;
+}
 
 // ---------- Fechas (siempre 'YYYY-MM-DD' en hora local) ----------
 const pad = (n) => String(n).padStart(2, '0');
@@ -73,6 +59,7 @@ export const RATINGS = [
   { v: 4, label: 'Fácil', emoji: '😎' },
 ];
 export const TIPO_REG = { estudio: 'Estudio', repaso: 'Repaso', vuelta: 'Vuelta completa' };
+export const TIPO_LABEL = { ...TIPO_REG, practica: 'Repaso rápido' };
 
 const byDate = (a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0);
 export function infoTema(tema) {
@@ -84,7 +71,7 @@ export function infoTema(tema) {
     vueltas: vueltas.length,
     ultimaVuelta: vueltas[vueltas.length - 1] || null,
     last: regs[regs.length - 1] || null,
-    nota: [...regs].reverse().find((r) => r.note) || null,
+    nota: [...regs].reverse().find((r) => r.note && r.tipo !== 'practica') || null, // la nota de "por dónde te quedaste"
     min: regs.reduce((a, r) => a + (r.min || 0), 0),
     proximo: tema?.proximo || null,
   };
@@ -200,21 +187,13 @@ export function autoplan(state, from, to) {
 }
 
 // ---------- Pruebas físicas ----------
-// Anclas aproximadas (puntos 0, 5 y 10). Revisa el anexo de tu convocatoria (BOE-A-2026-15055)
-// y ajústalas en Ajustes si cambian. p0 de agilidad = tiempo máximo eliminatorio.
-export const PRUEBAS = {
-  agilidad: { nombre: 'Circuito de agilidad', unidad: 's', menorMejor: true },
-  fuerza: { nombre: { H: 'Dominadas', M: 'Suspensión en barra' }, unidad: { H: 'rep.', M: 's' }, menorMejor: false },
-  carrera: { nombre: 'Carrera 1000 m', unidad: 'mm:ss', menorMejor: true },
-};
-export const BAREMO = {
-  agilidad: { H: [11.7, 10.5, 8.2], M: [12.8, 11.6, 9.3] },
-  fuerza: { H: [3, 10, 17], M: [19, 57, 95] },
-  carrera: { H: [234, 204, 174], M: [294, 249, 204] },
-};
-export const nombrePrueba = (p, sexo) => (typeof PRUEBAS[p].nombre === 'string' ? PRUEBAS[p].nombre : PRUEBAS[p].nombre[sexo]);
-export const unidadPrueba = (p, sexo) => (typeof PRUEBAS[p].unidad === 'string' ? PRUEBAS[p].unidad : PRUEBAS[p].unidad[sexo]);
+// Las pruebas y el baremo dependen de la oposición (ver oposiciones.js).
+const porSexo = (v, sexo) => (v && typeof v === 'object' ? v[sexo] : v);
+export const nombrePrueba = (p, sexo) => porSexo(PRUEBAS[p].nombre, sexo);
+export const tipoPrueba = (p, sexo) => porSexo(PRUEBAS[p].tipo, sexo); // 'mmss' | 'seg' | 'rep'
+export const unidadPrueba = (p, sexo) => ({ mmss: 'mm:ss', seg: 's', rep: 'rep.' }[tipoPrueba(p, sexo)]);
 
+// Policía Nacional: puntos de 0 a 10 por interpolación entre las marcas de 0, 5 y 10 puntos.
 export function puntos(prueba, sexo, value, baremo = BAREMO) {
   const [p0, p5, p10] = baremo[prueba][sexo];
   const menor = PRUEBAS[prueba].menorMejor;
@@ -224,18 +203,47 @@ export function puntos(prueba, sexo, value, baremo = BAREMO) {
   const pts = better(value, p5) ? 5 + (5 * (value - p5)) / (p10 - p5) : (5 * (value - p0)) / (p5 - p0);
   return Math.max(0, Math.min(10, Math.round(pts * 10) / 10));
 }
-export const fmtValor = (prueba, v) => {
-  if (prueba === 'carrera') return `${Math.floor(v / 60)}:${pad(Math.round(v % 60))}`;
-  if (prueba === 'agilidad') return `${v.toFixed(1).replace('.', ',')} s`;
+// Guardia Civil: marca mínima según sexo y tramo de edad (0: <35, 1: 35-39, 2: 40+).
+export const marcaMinima = (prueba, sexo, tramo = 0) => OPO.fisicas.marcas?.[prueba]?.[sexo]?.[tramo] ?? null;
+export function esApto(prueba, sexo, tramo, value) {
+  const m = marcaMinima(prueba, sexo, tramo);
+  if (m === null) return null;
+  return PRUEBAS[prueba].menorMejor ? value <= m : value >= m;
+}
+export function fmtValorTipo(tipo, v) {
+  if (tipo === 'mmss') return `${Math.floor(v / 60)}:${pad(Math.round(v % 60))}`;
+  if (tipo === 'seg') return `${(Math.round(v * 100) / 100).toString().replace('.', ',')} s`;
   return String(v);
-};
-export function parseValor(prueba, txt) {
+}
+export const fmtValor = (prueba, v, sexo = 'H') => fmtValorTipo(tipoPrueba(prueba, sexo), v);
+export function parseValor(prueba, txt, sexo = 'H') {
   txt = String(txt).trim().replace(',', '.');
-  if (prueba === 'carrera') {
+  if (tipoPrueba(prueba, sexo) === 'mmss') {
     if (txt.includes(':')) { const [m, s] = txt.split(':').map(Number); return m * 60 + s; }
     return Number(txt);
   }
   return Number(txt);
+}
+
+// ---------- Tests y simulacros ----------
+// Nota con la fórmula de las convocatorias: [A – E/(n–1)] × escala / P (nunca por debajo de 0).
+export function notaTest(t) {
+  const P = t.preguntas || (t.aciertos + t.fallos + (t.blancos || 0));
+  if (!P) return 0;
+  const n = t.alternativas || OPO.examen.alternativas;
+  const escala = t.escala || OPO.examen.escala;
+  return Math.max(0, Math.round(((t.aciertos - t.fallos / (n - 1)) * escala * 100) / P) / 100);
+}
+export const fmtNota = (n, escala = OPO.examen.escala) => (escala >= 100 ? (Math.round(n * 10) / 10) : (Math.round(n * 100) / 100)).toString().replace('.', ',');
+// Fallos por tema en los tests de los últimos 'dias' días.
+export function fallosPorTema(tests, dias = 60, ref = today()) {
+  const desde = addDays(ref, -dias);
+  const r = {};
+  (tests || []).filter((t) => t.date > desde).forEach((t) => {
+    Object.entries(t.fallosTemas || {}).forEach(([id, n]) => { r[id] = (r[id] || 0) + n; });
+    if (t.temaId && !t.fallosTemas?.[t.temaId]) r[t.temaId] = (r[t.temaId] || 0) + t.fallos;
+  });
+  return r;
 }
 
 export const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
