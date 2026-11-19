@@ -1,6 +1,6 @@
 import { html, render, useState, useEffect, useMemo } from './preact-htm.js';
 import * as L from './logic.js';
-import { getState, subscribe, update, replaceAll, cloud, acceso, permitido, initCloud, login, logout, defaultState, urlPago, conUsuario, reComprobar, borrarMisDatos, adminListar, adminActivar, adminRevocar, adminAmpliarPrueba } from './store.js';
+import { getState, subscribe, update, replaceAll, cloud, acceso, permitido, initCloud, login, logout, defaultState, urlPago, conUsuario, reComprobar, borrarMisDatos, guardarNovedades, adminListar, adminActivar, adminRevocar, adminAmpliarPrueba } from './store.js';
 import CONFIG from './app-config.js';
 import * as E from './engage.js';
 import CONTENIDO from './contenido.js';
@@ -232,6 +232,7 @@ function Bienvenida({ onFin }) {
   const [dias, setDias] = useState([0, 1, 2, 3, 4, 5]);
   const [horas, setHoras] = useState(15);
   const [res, setRes] = useState(null);
+  const [novedades, setNovedades] = useState(false);
   const masMeses = (n) => { const d = L.parse(hoy); d.setMonth(d.getMonth() + n); return L.toStr(d); };
   const toggle = (id) => setHechos((h) => (h.includes(id) ? h.filter((x) => x !== id) : [...h, id]));
   const bloque = (b) => { const ids = L.TEMAS.filter((t) => t.bloque === b).map((t) => t.id); const todos = ids.every((id) => hechos.includes(id)); setHechos((h) => (todos ? h.filter((x) => !ids.includes(x)) : [...new Set([...h, ...ids])])); };
@@ -251,6 +252,7 @@ function Bienvenida({ onFin }) {
     const fin = L.weekday(hoy) >= 5 ? addDays(hoy, 7) : addDays(L.weekStart(hoy), 6);
     const { nuevas } = L.autoplan(st, hoy, fin);
     update((x) => nuevas.forEach((k) => x.tasks.push({ id: L.uid(), done: false, ...k })));
+    if (novedades) cambiarNovedades(true, true);
     reiniciarLogrosVistos(getState());
     setRes({ tareas: nuevas.length, hoy: nuevas.filter((k) => k.date === hoy).length, r: E.ritmo(getState()) });
     setPaso(5);
@@ -290,6 +292,7 @@ function Bienvenida({ onFin }) {
       <div class="days">${L.DIAS_CORTO.map((d, i) => html`<button class=${'chip ' + (dias.includes(i) ? 'on' : '')} onClick=${() => setDias(dias.includes(i) ? dias.filter((x) => x !== i) : [...dias, i])}>${d}</button>`)}</div>
       <label class="lbl">¿Cuántas horas a la semana quieres estudiar?</label>
       <div class="quick">${[10, 15, 20, 25, 30].map((h) => html`<button class=${'chip ' + (+horas === h ? 'on' : '')} onClick=${() => setHoras(h)}>${h} h</button>`)}</div>
+      ${CONFIG.novedades?.activo && cloud.user ? html`<label class="toggle novedades"><input type="checkbox" checked=${novedades} onChange=${(e) => setNovedades(e.target.checked)} /><span>${CONFIG.novedades.texto} <a href="#/legal/privacidad" target="_blank">Privacidad</a></span></label>` : null}
       <div class="modal-f"><button class="btn ghost" onClick=${() => setPaso(3)}>Atrás</button><button class="btn primary" disabled=${!dias.length} onClick=${terminar}>Crear mi plan</button></div></div>` : null}
     ${paso === 5 && res ? html`<div class="wiz-body wiz-fin">
       <div class="wiz-emoji">🎉</div><h2>¡Tu plan está listo!</h2>
@@ -1375,12 +1378,28 @@ function CuentaCard() {
     ${acceso.estado === 'prueba' ? html`<div class="buy"><p>${CONFIG.oferta ? html`<span class="oferta">${CONFIG.oferta}</span> ` : null}Pago único de <b>${CONFIG.precio}</b>${CONFIG.precioAntes ? html` <s class="muted">${CONFIG.precioAntes}</s>` : null} para usarla para siempre. Tus datos se conservan.</p><${BotonPago} medio="cuenta" />
       <p class="muted small">Tras pagar, tu acceso se activa ${CONFIG.tiempoActivacion}.</p>
       <${OfertaPack} medio="cuenta-pack" /></div>` : null}
+    ${CONFIG.novedades?.activo ? html`<label class="toggle novedades"><input type="checkbox" checked=${!!getState().settings.novedades?.si} onChange=${async (e) => { const el = e.target, si = el.checked; if (!(await cambiarNovedades(si))) el.checked = !si; }} />
+      <span><b>📬 Novedades por email</b><br /><span class="muted small">${CONFIG.novedades.texto}</span></span></label>` : null}
     ${acceso.esAdmin ? html`<p><a class="btn" href="#/admin">Abrir panel de administración</a></p>` : null}
     ${cloud.error ? html`<p class="error small">${cloud.error}</p>` : null}
     <details><summary class="small muted">Eliminar mi cuenta</summary>
       <p class="small muted">Borra todos tus datos de estudio. ${CONFIG.emailSoporte ? `Para eliminar también tu registro de cuenta, escribe a ${CONFIG.emailSoporte}.` : ''}</p>
       <button class="btn danger sm" disabled=${borrando} onClick=${borrar}>Borrar mis datos y cerrar sesión</button></details>
   </section>`;
+}
+
+// Alta o baja en las novedades por email (consentimiento opcional, revocable en cualquier momento).
+async function cambiarNovedades(si, silencioso) {
+  try {
+    const ok = await guardarNovedades(si, CONFIG.novedades.texto);
+    if (!ok) { if (!silencioso) avisar('Las novedades por email solo funcionan con tu cuenta en la nube.'); return false; }
+    update((s) => { s.settings.novedades = { si, fecha: today() }; });
+    if (!silencioso) avisar(si ? '📬 ¡Listo! Recibirás las novedades de OpoMapas por email.' : 'Te has dado de baja de las novedades por email.');
+    return true;
+  } catch (e) {
+    avisar('No se pudo guardar: ' + e.message);
+    return false;
+  }
 }
 
 // ---------- ADMINISTRACIÓN ----------
@@ -1452,8 +1471,9 @@ function Legal({ doc }) {
       <h3>Para qué y con qué base legal</h3><ul>
         <li>Prestarte el servicio, sincronizar tus datos y gestionar la prueba y la compra: ejecución del contrato (art. 6.1.b RGPD).</li>
         <li>Conservar el registro de alta para evitar el uso abusivo de las pruebas gratuitas y atender reclamaciones: interés legítimo (art. 6.1.f RGPD).</li>
-        <li>Cumplir obligaciones contables y fiscales: obligación legal (art. 6.1.c RGPD).</li></ul>
-      <h3>Encargados y transferencias</h3><p>Usamos Google Firebase (Google Ireland Ltd.) para el inicio de sesión y el almacenamiento, y una plataforma de pago para cobrar. Algunos de estos proveedores pueden tratar datos fuera del Espacio Económico Europeo con garantías adecuadas (Marco de Privacidad de Datos UE-EE. UU. o cláusulas contractuales tipo). No vendemos ni cedemos tus datos a terceros.</p>
+        <li>Cumplir obligaciones contables y fiscales: obligación legal (art. 6.1.c RGPD).</li>
+        <li>Enviarte por email novedades, tests y ofertas de OpoMapas, solo si marcas la casilla para recibirlas: tu consentimiento (art. 6.1.a RGPD). Es opcional, no hace falta para usar la app y puedes retirarlo cuando quieras en Ajustes o con el enlace de baja de cada correo.</li></ul>
+      <h3>Encargados y transferencias</h3><p>Usamos Google Firebase (Google Ireland Ltd.) para el inicio de sesión y el almacenamiento, una plataforma de pago para cobrar y, si aceptas recibir novedades, Shopify para enviarte los correos. Algunos de estos proveedores pueden tratar datos fuera del Espacio Económico Europeo con garantías adecuadas (Marco de Privacidad de Datos UE-EE. UU. o cláusulas contractuales tipo). No vendemos ni cedemos tus datos a terceros.</p>
       <h3>Cuánto tiempo</h3><p>Mientras mantengas tu cuenta. Puedes borrar tus datos de estudio cuando quieras desde Ajustes → Tu cuenta. Los datos de facturación se conservan el plazo que exige la ley.</p>
       <h3>Tus derechos</h3><p>Puedes ejercer tus derechos de acceso, rectificación, supresión, oposición, limitación y portabilidad escribiendo a ${EM}. También puedes descargar una copia de tus datos desde Ajustes. Si no estás conforme, puedes reclamar ante la Agencia Española de Protección de Datos (www.aepd.es).</p>
       <h3>Cookies y almacenamiento local</h3><p>La aplicación solo usa almacenamiento técnico del navegador, necesario para mantener tu sesión y funcionar sin conexión. No usamos cookies publicitarias ni de analítica.</p>`],

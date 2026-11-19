@@ -247,6 +247,16 @@ export function conUsuario(plantilla, medio = '') {
 }
 export const urlPago = (medio = 'pago') => conUsuario(CONFIG.urlPago, medio);
 
+// Novedades por email (consentimiento opcional). Guarda qué aceptó y cuándo; el activador
+// de Cloudflare lo pasa a Shopify. Devuelve false si no hay cuenta en la nube (modo local o demo).
+export async function guardarNovedades(si, texto) {
+  if (!fb || !cloud.user) return false;
+  await fb.setDoc(fb.doc(fb.db, 'suscripciones', cloud.user.uid), {
+    email: cloud.user.email, estado: si ? 'si' : 'no', fecha: fb.serverTimestamp(), texto, origen: 'app', sincronizado: false,
+  });
+  return true;
+}
+
 // Derecho de supresión: borra tus datos de estudio de la nube y de este navegador.
 export async function borrarMisDatos() {
   if (fb && cloud.user) await fb.deleteDoc(fb.doc(fb.db, 'users', cloud.user.uid));

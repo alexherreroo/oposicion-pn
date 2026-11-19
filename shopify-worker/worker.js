@@ -9,9 +9,21 @@
 //    GOOGLE_SERVICE_ACCOUNT   el JSON completo de la cuenta de servicio de Firebase
 //  Opcional:
 //    SKU_MARCA                texto que debe contener el SKU (por defecto PLANIFICADOR)
+//
+//  Novedades por email (casilla opcional de la app → cliente suscrito en Shopify).
+//  Se ejecuta con un Cron Trigger (Settings → Triggers → Cron Triggers: */15 * * * *).
+//    SHOPIFY_SHOP             el dominio interno de la tienda, sin https (p. ej. d1yjv4-ts.myshopify.com)
+//    y una de estas dos formas de acceso a la API de Shopify (permiso write_customers):
+//    SHOPIFY_ADMIN_TOKEN      token shpat_… de una app personalizada creada en el admin de Shopify
+//    SHOPIFY_CLIENT_ID + SHOPIFY_CLIENT_SECRET   app creada en el Dev Dashboard (client credentials)
 // =====================================================================
 
 export default {
+  // Cada 15 minutos: pasa a Shopify las altas y bajas de novedades hechas en la app.
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil(sincronizarSuscripciones(env).then((r) => console.log('Novedades:', JSON.stringify(r))).catch((e) => console.error('Novedades:', e.message)));
+  },
+
   async fetch(request, env) {
     if (request.method !== 'POST') return new Response('Activador de licencias activo.', { status: 200 });
     const raw = await request.text();
@@ -102,4 +114,104 @@ async function tokenGoogle(sa, tokenUrl = 'https://oauth2.googleapis.com/token')
   });
   if (!r.ok) throw new Error(`Google token ${r.status}: ${await r.text()}`);
   return (await r.json()).access_token;
+}
+
+// =====================================================================
+//  Novedades por email: Firestore suscripciones/{uid} → cliente de Shopify
+// =====================================================================
+// Cada documento lo crea la app cuando el usuario marca o desmarca la casilla:
+//   { email, estado: 'si' | 'no', fecha, texto, origen: 'app', sincronizado: false }
+// Aquí se aplica en Shopify y se marca como sincronizado (con el resultado).
+async function sincronizarSuscripciones(env) {
+  if (!env.SHOPIFY_SHOP || !(env.SHOPIFY_ADMIN_TOKEN || (env.SHOPIFY_CLIENT_ID && env.SHOPIFY_CLIENT_SECRET))) {
+    return { omitido: 'Faltan SHOPIFY_SHOP y el acceso a la API de Shopify' };
+  }
+  const sa = JSON.parse(env.GOOGLE_SERVICE_ACCOUNT);
+  const gtoken = await tokenGoogle(sa, env.TOKEN_URL);
+  const base = `${env.FIRESTORE_BASE || 'https://firestore.googleapis.com'}/v1/projects/${sa.project_id}/databases/(default)/documents`;
+  const q = await fetch(`${base}:runQuery`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${gtoken}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ structuredQuery: {
+      from: [{ collectionId: 'suscripciones' }],
+      where: { fieldFilter: { field: { fieldPath: 'sincronizado' }, op: 'EQUAL', value: { booleanValue: false } } },
+      limit: 50,
+    } }),
+  });
+  if (!q.ok) throw new Error(`Firestore ${q.status}: ${await q.text()}`);
+  const docs = (await q.json()).map((x) => x.document).filter(Boolean);
+  if (!docs.length) return { procesadas: 0 };
+  const shop = shopifyCliente(env);
+  const res = { procesadas: 0, errores: 0 };
+  for (const d of docs) {
+    const email = String(d.fields?.email?.stringValue || '').trim().toLowerCase();
+    const si = d.fields?.estado?.stringValue === 'si';
+    const fecha = d.fields?.fecha?.timestampValue || new Date().toISOString();
+    let resultado;
+    try {
+      if (!email.includes('@')) throw new Error('email no válido');
+      resultado = await aplicarConsentimiento(shop, email, si, fecha);
+      res.procesadas++;
+    } catch (e) {
+      resultado = 'error: ' + e.message; res.errores++;
+    }
+    // Solo se marca si el documento no ha cambiado desde que lo leímos (si cambió, va en la siguiente pasada).
+    const nombre = d.name.split('/documents/')[1];
+    const mask = ['sincronizado', 'resultado', 'sincronizadoEl'].map((f) => 'updateMask.fieldPaths=' + f).join('&');
+    await fetch(`${base}/${nombre}?${mask}&currentDocument.updateTime=${encodeURIComponent(d.updateTime)}`, {
+      method: 'PATCH',
+      headers: { Authorization: `Bearer ${gtoken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fields: {
+        // Los errores se reintentan en la siguiente pasada.
+        sincronizado: { booleanValue: !String(resultado).startsWith('error') },
+        resultado: { stringValue: String(resultado).slice(0, 300) },
+        sincronizadoEl: { timestampValue: new Date().toISOString() },
+      } }),
+    });
+  }
+  return res;
+}
+
+async function aplicarConsentimiento(shop, email, si, fecha) {
+  const consentimiento = { marketingState: si ? 'SUBSCRIBED' : 'UNSUBSCRIBED', marketingOptInLevel: 'SINGLE_OPT_IN', consentUpdatedAt: fecha };
+  const b = await shop(`query Buscar($q: String!) { customers(first: 1, query: $q) { nodes { id } } }`, { q: `email:"${email}"` });
+  const id = b.customers.nodes[0]?.id;
+  if (!id) {
+    if (!si) return 'baja sin cliente en Shopify';
+    const c = await shop(`mutation Crear($input: CustomerInput!) { customerCreate(input: $input) { customer { id } userErrors { field message } } }`,
+      { input: { email, tags: ['newsletter', 'app-planificador'], emailMarketingConsent: consentimiento } });
+    if (c.customerCreate.userErrors.length) throw new Error(c.customerCreate.userErrors.map((x) => x.message).join('; '));
+    return 'cliente creado y suscrito';
+  }
+  const u = await shop(`mutation Consent($input: CustomerEmailMarketingConsentUpdateInput!) { customerEmailMarketingConsentUpdate(input: $input) { customer { id } userErrors { field message } } }`,
+    { input: { customerId: id, emailMarketingConsent: consentimiento } });
+  if (u.customerEmailMarketingConsentUpdate.userErrors.length) throw new Error(u.customerEmailMarketingConsentUpdate.userErrors.map((x) => x.message).join('; '));
+  if (si) await shop(`mutation Tags($id: ID!, $tags: [String!]!) { tagsAdd(id: $id, tags: $tags) { userErrors { field message } } }`, { id, tags: ['newsletter', 'app-planificador'] });
+  return si ? 'cliente existente suscrito' : 'cliente dado de baja';
+}
+
+// Cliente mínimo de la API GraphQL de Shopify (token fijo o client credentials, que dura 24 h).
+function shopifyCliente(env) {
+  const dominio = String(env.SHOPIFY_SHOP).replace(/^https?:\/\//, '').replace(/\/.*$/, '');
+  const version = env.SHOPIFY_API_VERSION || '2026-07';
+  let token = env.SHOPIFY_ADMIN_TOKEN || null;
+  return async (query, variables) => {
+    if (!token) {
+      const r = await fetch(`https://${dominio}/admin/oauth/access_token`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: `grant_type=client_credentials&client_id=${encodeURIComponent(env.SHOPIFY_CLIENT_ID)}&client_secret=${encodeURIComponent(env.SHOPIFY_CLIENT_SECRET)}`,
+      });
+      if (!r.ok) throw new Error(`Shopify token ${r.status}: ${await r.text()}`);
+      token = (await r.json()).access_token;
+    }
+    const r = await fetch(`https://${dominio}/admin/api/${version}/graphql.json`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Shopify-Access-Token': token },
+      body: JSON.stringify({ query, variables }),
+    });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok || j.errors) throw new Error(`Shopify ${r.status}: ${JSON.stringify(j.errors || j).slice(0, 200)}`);
+    return j.data;
+  };
 }
